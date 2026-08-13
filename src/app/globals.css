@@ -20,9 +20,10 @@
   --bk-gray: #63666a;
   --bk-gray-light: #d0d0ce;
 
-  /* Fixed platform accents — identical in light & dark. */
-  --platform-google: #00587c;
-  --platform-meta: #8bb8e8;
+  /* Platform series colours = categorical chart slots 1 (blue) & 2 (orange),
+     so they adapt per light/dark step while keeping the same hue everywhere. */
+  --platform-google: var(--chart-1);
+  --platform-meta: var(--chart-2);
 }
 
 /* ---------------------------- Light theme ------------------------------- */
@@ -48,12 +49,13 @@
   --input: #dfe3e7;
   --ring: #00587c;
 
-  /* Chart palette — brand-anchored, tuned for a light background. */
-  --chart-1: #00587c; /* blue  */
-  --chart-2: #6aa6df; /* sky   */
-  --chart-3: #2f9e8f; /* teal  */
-  --chart-4: #d9a441; /* gold  */
-  --chart-5: #63666a; /* gray  */
+  /* Categorical chart palette — validated colorblind-safe (dataviz skill).
+     The UI stays brand-navy; chart SERIES use these accessible hues. */
+  --chart-1: #2a78d6; /* blue    (Google) */
+  --chart-2: #eb6834; /* orange  (Meta)   */
+  --chart-3: #1baf7a; /* aqua    */
+  --chart-4: #eda100; /* yellow  */
+  --chart-5: #e87ba4; /* magenta */
 
   --sidebar: #f7f9fb;
   --sidebar-foreground: #28334a;
@@ -86,12 +88,12 @@
   --input: rgba(208, 215, 228, 0.14);
   --ring: #8bb8e8; /* sky focus ring */
 
-  /* Chart palette — brightened so series read on the dark navy ground. */
-  --chart-1: #4aa3d0; /* blue  */
-  --chart-2: #8bb8e8; /* sky   */
-  --chart-3: #3fb9a6; /* teal  */
-  --chart-4: #e6b168; /* gold  */
-  --chart-5: #9aa4b2; /* gray  */
+  /* Categorical chart palette — dark steps, validated on the navy surface. */
+  --chart-1: #3987e5; /* blue    (Google) */
+  --chart-2: #d95926; /* orange  (Meta)   */
+  --chart-3: #199e70; /* aqua    */
+  --chart-4: #c98500; /* yellow  */
+  --chart-5: #d55181; /* magenta */
 
   --sidebar: #141b27;
   --sidebar-foreground: #e9eef4;

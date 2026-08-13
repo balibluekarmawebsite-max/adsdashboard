@@ -14,7 +14,7 @@ export default function Home() {
       {/* Ambient background glow */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="bg-primary/[0.08] absolute top-[-15%] left-1/2 h-[500px] w-[900px] max-w-[95vw] -translate-x-1/2 rounded-full blur-[130px]" />
-        <div className="bg-chart-2/[0.06] absolute bottom-[-20%] left-1/2 h-[300px] w-[600px] max-w-[95vw] -translate-x-1/2 rounded-full blur-[130px]" />
+        <div className="bg-brand-sky/[0.06] absolute bottom-[-20%] left-1/2 h-[300px] w-[600px] max-w-[95vw] -translate-x-1/2 rounded-full blur-[130px]" />
       </div>
 
       <div className="flex w-full max-w-xl flex-col items-center text-center">

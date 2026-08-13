@@ -234,3 +234,11 @@ export async function byCampaign(filter: MetricsFilter, limit = 500) {
   }));
   return { range: rangeMeta(filter), campaigns };
 }
+
+// Response types — reused client-side via `import type` (erased at build, so no
+// server code is bundled). Keeps the API and the UI in lock-step.
+export type SummaryResult = Awaited<ReturnType<typeof summary>>;
+export type TimeseriesResult = Awaited<ReturnType<typeof timeseries>>;
+export type ByPlatformResult = Awaited<ReturnType<typeof byPlatform>>;
+export type ByPropertyResult = Awaited<ReturnType<typeof byProperty>>;
+export type ByCampaignResult = Awaited<ReturnType<typeof byCampaign>>;
