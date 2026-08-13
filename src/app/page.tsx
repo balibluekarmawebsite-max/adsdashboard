@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 
 const PROPERTIES = [
@@ -48,9 +49,15 @@ export default function Home() {
           ))}
         </div>
 
-        <p className="text-muted-foreground mt-10 text-sm">
-          Setup in progress — Phase 1 of 8 · project scaffold ready
-        </p>
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <Link
+            href="/login"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring inline-flex h-10 items-center justify-center rounded-md px-6 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Sign in
+          </Link>
+          <p className="text-muted-foreground text-xs">Phase 2 of 8 · database &amp; auth ready</p>
+        </div>
       </div>
 
       <footer className="text-muted-foreground/70 absolute bottom-6 font-mono text-xs">
