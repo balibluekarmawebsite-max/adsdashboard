@@ -3,84 +3,104 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+   Blue Karma Secrets brand palette (from the official brand guide)
+   Primary  #00587C  PANTONE 308 C   — logo / headlines / primary actions
+   Navy     #28334A  PANTONE 2380 C  — dark surfaces
+   Sky      #8BB8E8  PANTONE 278 C   — accent / focus / secondary series
+   Gray10   #63666A  Cool Gray 10 C  — muted text
+   Gray2    #D0D0CE  Cool Gray 2 C   — light borders / surfaces
+   These raw brand refs are defined once and inherited into dark mode so a
+   series keeps the same colour everywhere (Phase 6 requirement).
+--------------------------------------------------------------------------- */
+:root {
+  --bk-blue: #00587c;
+  --bk-navy: #28334a;
+  --bk-sky: #8bb8e8;
+  --bk-gray: #63666a;
+  --bk-gray-light: #d0d0ce;
+
+  /* Fixed platform accents — identical in light & dark. */
+  --platform-google: #00587c;
+  --platform-meta: #8bb8e8;
+}
+
+/* ---------------------------- Light theme ------------------------------- */
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: #ffffff;
+  --foreground: #28334a; /* brand navy for text */
+  --card: #ffffff;
+  --card-foreground: #28334a;
+  --popover: #ffffff;
+  --popover-foreground: #28334a;
+  --primary: #00587c; /* brand blue */
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f6;
+  --secondary-foreground: #28334a;
+  --muted: #f1f3f5;
+  --muted-foreground: #63666a; /* brand cool gray */
+  --accent: #e7f0fb; /* sky tint */
+  --accent-foreground: #00587c;
+  --destructive: #d64545;
+  --border: #e2e5e8; /* ~ cool gray 2 */
+  --input: #dfe3e7;
+  --ring: #00587c;
 
-  /* Chart palette. chart-1 is reserved for Google, chart-2 for Meta (see design notes). */
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Chart palette — brand-anchored, tuned for a light background. */
+  --chart-1: #00587c; /* blue  */
+  --chart-2: #6aa6df; /* sky   */
+  --chart-3: #2f9e8f; /* teal  */
+  --chart-4: #d9a441; /* gold  */
+  --chart-5: #63666a; /* gray  */
 
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-
-  /* Fixed brand accents for platforms — identical in light & dark so a
-     series keeps the same colour everywhere (Phase 6 requirement). */
-  --platform-google: oklch(0.62 0.19 256);
-  --platform-meta: oklch(0.68 0.16 233);
+  --sidebar: #f7f9fb;
+  --sidebar-foreground: #28334a;
+  --sidebar-primary: #00587c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e7f0fb;
+  --sidebar-accent-foreground: #00587c;
+  --sidebar-border: #e2e5e8;
+  --sidebar-ring: #00587c;
 }
 
+/* ---------------------------- Dark theme (primary) ---------------------- */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #111620; /* deep navy, derived from brand navy */
+  --foreground: #e9eef4;
+  --card: #19212f;
+  --card-foreground: #e9eef4;
+  --popover: #19212f;
+  --popover-foreground: #e9eef4;
+  --primary: #00587c; /* brand blue */
+  --primary-foreground: #ffffff;
+  --secondary: #212b3d;
+  --secondary-foreground: #e9eef4;
+  --muted: #1c2534;
+  --muted-foreground: #93a0b4;
+  --accent: #223048; /* deep sky-navy hover surface */
+  --accent-foreground: #cfe1f6;
+  --destructive: #e5645f;
+  --border: rgba(208, 215, 228, 0.1); /* subtle light hairline */
+  --input: rgba(208, 215, 228, 0.14);
+  --ring: #8bb8e8; /* sky focus ring */
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  /* Chart palette — brightened so series read on the dark navy ground. */
+  --chart-1: #4aa3d0; /* blue  */
+  --chart-2: #8bb8e8; /* sky   */
+  --chart-3: #3fb9a6; /* teal  */
+  --chart-4: #e6b168; /* gold  */
+  --chart-5: #9aa4b2; /* gray  */
 
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: #141b27;
+  --sidebar-foreground: #e9eef4;
+  --sidebar-primary: #8bb8e8;
+  --sidebar-primary-foreground: #111620;
+  --sidebar-accent: #212b3d;
+  --sidebar-accent-foreground: #e9eef4;
+  --sidebar-border: rgba(208, 215, 228, 0.08);
+  --sidebar-ring: #8bb8e8;
 }
 
 @theme inline {
@@ -125,6 +145,13 @@
 
   --color-platform-google: var(--platform-google);
   --color-platform-meta: var(--platform-meta);
+
+  /* Named brand utilities (e.g. bg-brand-blue, text-brand-sky). */
+  --color-brand-blue: var(--bk-blue);
+  --color-brand-navy: var(--bk-navy);
+  --color-brand-sky: var(--bk-sky);
+  --color-brand-gray: var(--bk-gray);
+  --color-brand-gray-light: var(--bk-gray-light);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
