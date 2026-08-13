@@ -5,12 +5,13 @@ A self-hosted dashboard that pulls advertising data from **Google Ads** and **Me
 professional interface. Built for **Blue Karma Secrets** to see ad performance across every
 property (BKDS, BKDU, BKV, Oracle Yacht) in one place.
 
-> **Status:** Phases 1–5 built — the full backend. Scaffold + brand theme,
-> database + auth, both connectors (**Google** GAQL + **Meta** Insights) writing to
-> `metrics_daily`, a daily **node-cron** scheduler, and the auth-protected
-> **`/api/metrics/*`** aggregation API (summary with % change, timeseries,
-> by-platform/property/campaign; SQL-side, mixed-currency aware). Connectors need
-> live credentials for real data. The **dashboard UI (Phase 6)** is next.
+> **Status:** Phases 1–6 built — the app is feature-complete. Full backend
+> (DB + auth, **Google** + **Meta** connectors → `metrics_daily`, daily scheduler,
+> aggregation API) plus the **dashboard UI**: filters (date/platform/property),
+> KPI cards with favorable-direction deltas, an animated trend chart, Google-vs-Meta
+> and property breakdowns, and a sortable/searchable campaign table — in the Blue
+> Karma theme with a colorblind-safe chart palette. Connectors need live
+> credentials for real data. **Deployment to the VPS (Phase 7)** is next.
 
 ---
 
