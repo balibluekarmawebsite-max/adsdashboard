@@ -1,0 +1,148 @@
+// Ads Analytics Dashboard — Prisma schema (Phase 2)
+// Prisma 7: the datasource URL is supplied by prisma.config.ts (from .env),
+// not inline here. The generated client is emitted to src/generated/prisma.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+// Lowercase values match the domain strings used across the API/connectors
+// (platform="google" / "meta").
+enum Platform {
+  google
+  meta
+}
+
+enum ConnectionStatus {
+  active
+  needs_reauth
+  error
+}
+
+enum SyncStatus {
+  running
+  success
+  error
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+/// Business units whose ad performance we track (BKDS, BKDU, BKV, ORACLE).
+model Property {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  adAccounts   AdAccount[]
+  metricsDaily MetricsDaily[]
+
+  @@map("properties")
+}
+
+/// Dashboard logins for the team.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(MEMBER)
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}
+
+/// One row per connected platform account. The token is stored ENCRYPTED
+/// (AES-256-GCM) in `secretEncrypted` — never in plain text.
+model PlatformConnection {
+  id              String           @id @default(cuid())
+  platform        Platform
+  accountRef      String // human-readable label / external account reference
+  secretEncrypted String // AES-GCM ciphertext of the refresh/system token
+  status          ConnectionStatus @default(active)
+  lastSyncedAt    DateTime?
+  createdAt       DateTime         @default(now())
+
+  @@unique([platform, accountRef])
+  @@map("platform_connections")
+}
+
+/// Links a platform ad-account id to a property, with its reporting currency.
+model AdAccount {
+  id                String   @id @default(cuid())
+  propertyId        String
+  platform          Platform
+  externalAccountId String // Google customer id or Meta act_ id
+  accountName       String
+  currency          String   @db.Char(3) // ISO 4217, e.g. "IDR"
+
+  property     Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  metricsDaily MetricsDaily[]
+
+  @@unique([platform, externalAccountId])
+  @@index([propertyId])
+  @@map("ad_accounts")
+}
+
+/// THE unified daily metrics table — both Google and Meta normalize into this.
+/// Derived metrics (CTR/CPC/CPM/CVR/ROAS) are computed on read, never stored.
+model MetricsDaily {
+  id              String   @id @default(cuid())
+  date            DateTime @db.Date
+  propertyId      String
+  platform        Platform
+  adAccountId     String
+  campaignId      String
+  campaignName    String
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  spend           Decimal  @default(0) @db.Decimal(18, 4) // money — Decimal, never Float
+  conversions     Decimal  @default(0) @db.Decimal(14, 4)
+  conversionValue Decimal  @default(0) @db.Decimal(18, 4)
+  currency        String   @db.Char(3)
+  updatedAt       DateTime @updatedAt
+
+  property  Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+
+  // Idempotency: without this unique key, every daily re-sync would duplicate
+  // rows. Connectors upsert on it, so re-pulling a date range corrects data.
+  @@unique([date, platform, adAccountId, campaignId])
+  @@index([date])
+  @@index([propertyId])
+  @@index([platform])
+  @@index([propertyId, date])
+  @@map("metrics_daily")
+}
+
+/// Audit of every sync run (what ran, how many rows, success/error).
+model SyncLog {
+  id           String     @id @default(cuid())
+  platform     Platform
+  adAccountId  String?
+  startedAt    DateTime   @default(now())
+  finishedAt   DateTime?
+  status       SyncStatus @default(running)
+  rowsWritten  Int        @default(0)
+  errorMessage String?
+
+  @@index([platform, startedAt])
+  @@map("sync_logs")
+}
