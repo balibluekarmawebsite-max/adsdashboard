@@ -5,10 +5,11 @@ A self-hosted dashboard that pulls advertising data from **Google Ads** and **Me
 professional interface. Built for **Blue Karma Secrets** to see ad performance across every
 property (BKDS, BKDU, BKV, Oracle Yacht) in one place.
 
-> **Status:** Phases 1–3 built. Scaffold + brand theme, database + auth, and the
-> Google Ads connector (GAQL fetch → normalize → idempotent upsert, OAuth flow, and
-> `npm run sync:google`) are done. Google needs live credentials to pull real data;
-> Meta integration and the dashboard UI are next.
+> **Status:** Phases 1–4 built. Scaffold + brand theme, database + auth, and both
+> connectors — **Google Ads** (GAQL) and **Meta** (Insights API) — normalize into
+> `metrics_daily` via `sync:google` / `sync:meta` / `sync:all`. Both need live
+> credentials to pull real data. The daily scheduler + aggregation API (Phase 5)
+> and the dashboard UI (Phase 6) are next.
 
 ---
 
