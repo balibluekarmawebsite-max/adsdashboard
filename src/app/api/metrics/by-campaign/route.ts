@@ -12,8 +12,10 @@ export async function GET(request: Request) {
     await requireSession();
     const sp = new URL(request.url).searchParams;
     const filter = await parseMetricsParams(sp);
-    const n = Number(sp.get("limit"));
-    const limit = Number.isFinite(n) ? Math.min(Math.max(n, 1), 1000) : 500;
+    // Missing/blank limit → default 500 (note Number(null) === 0, not NaN).
+    const rawLimit = sp.get("limit");
+    const parsedLimit = rawLimit != null && rawLimit !== "" ? Number(rawLimit) : NaN;
+    const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 1000) : 500;
     return NextResponse.json(await byCampaign(filter, limit));
   } catch (err) {
     return errorResponse(err);

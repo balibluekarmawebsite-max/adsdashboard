@@ -126,8 +126,7 @@ async function backoffOnUsage(header: string | null): Promise<void> {
 
 async function fetchWithRetry(url: string, maxAttempts = 4): Promise<Response> {
   let attempt = 0;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  for (;;) {
     attempt++;
     try {
       const res = await fetch(url);
