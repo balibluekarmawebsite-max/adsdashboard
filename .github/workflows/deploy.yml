@@ -1,0 +1,28 @@
+name: Deploy to VPS
+
+# Deploys on push to main. Merge your feature branch into main to go live.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          script_stop: true
+          command_timeout: 20m
+          script: |
+            export DEPLOY_BRANCH=main
+            bash ~/apps/adsdashboard/scripts/server-deploy.sh

@@ -135,8 +135,11 @@ Target: the existing **Bluehost dedicated server (cPanel/WHM on AlmaLinux 9)** t
 `bluekarmasecrets.com`, served at the subdomain **`ads.bluekarmasecrets.com`**.
 
 To avoid any risk to the live site, deployment uses the cPanel-native path (subdomain +
-reverse proxy + Node/PostgreSQL on the host + cPanel AutoSSL) rather than Docker. Full runbook
-arrives in Phase 7.
+reverse proxy + Node/PostgreSQL on the host + cPanel AutoSSL) rather than Docker.
+
+**Full copy-paste runbook: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).** The deploy kit lives in
+`deploy/` (Apache proxy configs), `ecosystem.config.cjs` (PM2), `scripts/server-deploy.sh` +
+`scripts/backup-db.sh`, and `.github/workflows/deploy.yml` (push-to-`main` → SSH deploy).
 
 ## Security
 

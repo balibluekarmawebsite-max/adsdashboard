@@ -1,0 +1,23 @@
+# ads.bluekarmasecrets.com  →  Next.js app on 127.0.0.1:3000
+#
+# SIMPLE ROUTE (no root / WHM needed). Place this as `.htaccess` in the
+# subdomain's document root, e.g.:
+#   ~/ads.bluekarmasecrets.com/.htaccess
+#   (or ~/public_html/ads.bluekarmasecrets.com/.htaccess — check the docroot cPanel made)
+#
+# Needs these Apache modules (EasyApache 4 usually has them; enable if missing):
+#   mod_rewrite, mod_proxy, mod_proxy_http, mod_headers
+
+RewriteEngine On
+
+# Force HTTPS, but let cPanel AutoSSL validate over HTTP via /.well-known/.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Tell the app it is behind HTTPS (secure cookies / Auth.js rely on this).
+RequestHeader set X-Forwarded-Proto "https"
+
+# Reverse-proxy everything else to the Node app.
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
