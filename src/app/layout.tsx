@@ -18,15 +18,22 @@ export const metadata: Metadata = {
     "Unified Google & Meta advertising analytics for Blue Karma properties — pulled daily into one dashboard.",
 };
 
+// Applied before paint so there's no flash: default is light; only an explicit
+// saved choice of "dark" adds the class. Kept inline (not a component) so it
+// runs synchronously ahead of the first render.
+const themeInit = `try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  // Dark mode is the primary theme (a proper light/dark toggle arrives in Phase 6).
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        {children}
+      </body>
     </html>
   );
 }

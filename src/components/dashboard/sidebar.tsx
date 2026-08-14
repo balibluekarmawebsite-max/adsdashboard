@@ -1,13 +1,26 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Users } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
+import { asRole, canManageUsers } from "@/lib/rbac";
 import { useFilters } from "@/components/providers/filters-provider";
 import type { PropertyOption } from "./shell";
 
-export function Sidebar({ properties }: { properties: PropertyOption[] }) {
+export function Sidebar({
+  properties,
+  user,
+}: {
+  properties: PropertyOption[];
+  user: { role?: string };
+}) {
   const { property, setProperty } = useFilters();
+  const pathname = usePathname();
+  const isOverview = pathname === "/dashboard";
+  const showTeam = canManageUsers(asRole(user.role));
 
   return (
     <aside className="bg-sidebar border-sidebar-border hidden w-60 shrink-0 flex-col border-r lg:flex">
@@ -20,31 +33,73 @@ export function Sidebar({ properties }: { properties: PropertyOption[] }) {
           <p className="text-muted-foreground px-2 pb-1 text-xs font-medium tracking-wide uppercase">
             Menu
           </p>
-          <span className="bg-sidebar-accent text-sidebar-accent-foreground flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium">
+          <NavLink
+            href="/dashboard"
+            active={isOverview}
+            icon={<LayoutDashboard className="size-4" />}
+          >
             Overview
-          </span>
+          </NavLink>
+          {showTeam && (
+            <NavLink
+              href="/dashboard/users"
+              active={pathname.startsWith("/dashboard/users")}
+              icon={<Users className="size-4" />}
+            >
+              Team
+            </NavLink>
+          )}
         </div>
 
-        <div className="space-y-1">
-          <p className="text-muted-foreground px-2 pb-1 text-xs font-medium tracking-wide uppercase">
-            Properties
-          </p>
-          <PropertyItem active={property === "all"} onClick={() => setProperty("all")}>
-            <span className="font-medium">All properties</span>
-          </PropertyItem>
-          {properties.map((p) => (
-            <PropertyItem
-              key={p.code}
-              active={property === p.code}
-              onClick={() => setProperty(p.code)}
-            >
-              <span className="font-medium">{p.code}</span>
-              <span className="text-muted-foreground truncate text-xs">{p.name}</span>
+        {isOverview && (
+          <div className="space-y-1">
+            <p className="text-muted-foreground px-2 pb-1 text-xs font-medium tracking-wide uppercase">
+              Properties
+            </p>
+            <PropertyItem active={property === "all"} onClick={() => setProperty("all")}>
+              <span className="font-medium">All properties</span>
             </PropertyItem>
-          ))}
-        </div>
+            {properties.map((p) => (
+              <PropertyItem
+                key={p.code}
+                active={property === p.code}
+                onClick={() => setProperty(p.code)}
+              >
+                <span className="font-medium">{p.code}</span>
+                <span className="text-muted-foreground truncate text-xs">{p.name}</span>
+              </PropertyItem>
+            ))}
+          </div>
+        )}
       </nav>
     </aside>
+  );
+}
+
+function NavLink({
+  href,
+  active,
+  icon,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50",
+      )}
+    >
+      {icon}
+      {children}
+    </Link>
   );
 }
 

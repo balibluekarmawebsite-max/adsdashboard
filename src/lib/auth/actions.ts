@@ -26,7 +26,7 @@ export async function authenticate(_prev: FormState, formData: FormData): Promis
 
 /**
  * Register a new account.
- * - The very first user bootstraps as ADMIN (no seeded password needed).
+ * - The very first user bootstraps as OWNER (no seeded password needed).
  * - After that, self-registration is blocked unless ALLOW_PUBLIC_REGISTRATION=true,
  *   so randoms can't sign up to an internet-facing internal tool.
  */
@@ -56,7 +56,7 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
       email,
       name: name || null,
       passwordHash,
-      role: userCount === 0 ? "ADMIN" : "MEMBER",
+      role: userCount === 0 ? "OWNER" : "MEMBER",
     },
   });
 
