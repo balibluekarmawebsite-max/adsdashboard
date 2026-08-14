@@ -1,4 +1,4 @@
-# ads.bluekarmasecrets.com  →  Next.js app on 127.0.0.1:3000
+# ads.bluekarmasecrets.com  →  Next.js app on 127.0.0.1:3001
 #
 # SIMPLE ROUTE (no root / WHM needed). Place this as `.htaccess` in the
 # subdomain's document root, e.g.:
@@ -20,4 +20,4 @@ RequestHeader set X-Forwarded-Proto "https"
 
 # Reverse-proxy everything else to the Node app.
 RewriteCond %{REQUEST_URI} !^/\.well-known/
-RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+RewriteRule ^(.*)$ http://127.0.0.1:3001/$1 [P,L]

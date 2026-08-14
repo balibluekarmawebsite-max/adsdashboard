@@ -10,7 +10,7 @@ We deliberately **do not use Docker** (unsupported alongside cPanel). Instead:
 Internet ──HTTPS──► Apache (cPanel vhost + AutoSSL)
                        │  reverse proxy
                        ▼
-                 Next.js app (PM2, 127.0.0.1:3000)  ──►  PostgreSQL 16 (localhost)
+                 Next.js app (PM2, 127.0.0.1:3001)  ──►  PostgreSQL 16 (localhost)
                        │
                   in-process daily sync (node-cron)
 ```
@@ -192,7 +192,7 @@ npm run build
 pm2 start ecosystem.config.cjs
 pm2 save
 pm2 status                     # ads-dashboard should be "online"
-curl -sI http://127.0.0.1:3000 | head -1   # HTTP/1.1 200 OK
+curl -sI http://127.0.0.1:3001 | head -1   # HTTP/1.1 200 OK
 ```
 
 ### Keep it running across reboots (root once)
