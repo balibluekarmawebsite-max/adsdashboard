@@ -20,7 +20,8 @@
     "sync:meta": "tsx scripts/sync-meta.ts",
     "sync:all": "tsx scripts/sync-all.ts",
     "connect:meta": "tsx scripts/connect-meta.ts",
-    "promote:owner": "tsx scripts/promote-owner.ts"
+    "promote:owner": "tsx scripts/promote-owner.ts",
+    "link:account": "tsx scripts/link-ad-account.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
