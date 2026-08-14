@@ -11,6 +11,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (!session?.user) redirect("/login");
 
   const properties = await prisma.property.findMany({
+    where: { active: true },
     orderBy: { code: "asc" },
     select: { code: true, name: true },
   });

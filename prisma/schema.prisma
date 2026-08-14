@@ -50,6 +50,7 @@ model Property {
   id        String   @id @default(cuid())
   name      String
   code      String   @unique
+  active    Boolean  @default(true) // hidden from the dashboard when false
   createdAt DateTime @default(now())
 
   adAccounts   AdAccount[]

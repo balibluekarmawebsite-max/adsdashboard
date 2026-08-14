@@ -7,18 +7,18 @@ const prisma = new PrismaClient({ adapter });
 
 // Blue Karma properties. Idempotent: safe to run repeatedly (upsert on code).
 const PROPERTIES = [
-  { code: "BKDS", name: "Blue Karma Seminyak" },
-  { code: "BKDU", name: "Blue Karma Ubud" },
-  { code: "BKV", name: "Blue Karma Village" },
-  { code: "ORACLE", name: "Oracle Yacht" },
+  { code: "BKDS", name: "Blue Karma Seminyak", active: true },
+  { code: "BKDU", name: "Blue Karma Ubud", active: true },
+  { code: "BKV", name: "Blue Karma Village", active: true },
+  { code: "ORACLE", name: "Oracle Yacht", active: false }, // hidden from the dashboard
 ] as const;
 
 async function main() {
   for (const p of PROPERTIES) {
     await prisma.property.upsert({
       where: { code: p.code },
-      update: { name: p.name },
-      create: { code: p.code, name: p.name },
+      update: { name: p.name, active: p.active },
+      create: { code: p.code, name: p.name, active: p.active },
     });
   }
   const count = await prisma.property.count();

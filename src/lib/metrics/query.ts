@@ -203,11 +203,12 @@ export async function byProperty(filter: MetricsFilter) {
     _sum: SUM,
   });
   const props = await prisma.property.findMany({
-    where: { id: { in: groups.map((g) => g.propertyId) } },
+    where: { id: { in: groups.map((g) => g.propertyId) }, active: true },
     select: { id: true, code: true, name: true },
   });
   const byId = new Map(props.map((p) => [p.id, p]));
   const properties = groups
+    .filter((g) => byId.has(g.propertyId)) // drop hidden/inactive properties
     .map((g) => ({
       propertyId: g.propertyId,
       code: byId.get(g.propertyId)?.code ?? null,
