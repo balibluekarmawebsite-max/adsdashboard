@@ -9,6 +9,7 @@ import type { NormalizedMetricRow, PlatformName } from "./types";
 export async function upsertMetricRow(row: NormalizedMetricRow): Promise<void> {
   const date = toDateColumn(row.date);
   const values = {
+    propertyId: row.propertyId, // updatable, so re-syncing applies routing changes
     campaignName: row.campaignName,
     impressions: Math.round(row.impressions),
     clicks: Math.round(row.clicks),
@@ -30,7 +31,6 @@ export async function upsertMetricRow(row: NormalizedMetricRow): Promise<void> {
     create: {
       date,
       platform: row.platform,
-      propertyId: row.propertyId,
       adAccountId: row.adAccountId,
       campaignId: row.campaignId,
       ...values,

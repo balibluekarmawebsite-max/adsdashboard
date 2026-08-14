@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { runAccountSync } from "@/lib/sync/metrics";
 import { rollingWindow } from "@/lib/sync/dates";
 import type { AccountSyncResult } from "@/lib/sync/types";
+import { loadRoutes, applyRoutes } from "@/lib/sync/routing";
 import { fetchDailyMetrics } from "./connector";
 
 const DEFAULT_DAYS = Number(process.env.SYNC_ROLLING_DAYS ?? 21);
@@ -21,16 +22,19 @@ export async function syncAllGoogle(days: number = DEFAULT_DAYS): Promise<Google
 
   const results: AccountSyncResult[] = [];
   for (const account of accounts) {
+    const routes = await loadRoutes(account.id);
     const res = await runAccountSync({
       platform: "google",
       adAccountId: account.id,
       externalAccountId: account.externalAccountId,
-      fetch: () =>
-        fetchDailyMetrics(account.externalAccountId, start, end, {
+      fetch: async () => {
+        const rows = await fetchDailyMetrics(account.externalAccountId, start, end, {
           propertyId: account.propertyId,
           adAccountId: account.id,
           currency: account.currency,
-        }),
+        });
+        return applyRoutes(rows, routes);
+      },
     });
     results.push({ externalAccountId: account.externalAccountId, ...res });
   }

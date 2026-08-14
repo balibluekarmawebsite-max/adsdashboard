@@ -53,8 +53,9 @@ model Property {
   active    Boolean  @default(true) // hidden from the dashboard when false
   createdAt DateTime @default(now())
 
-  adAccounts   AdAccount[]
-  metricsDaily MetricsDaily[]
+  adAccounts     AdAccount[]
+  metricsDaily   MetricsDaily[]
+  campaignRoutes CampaignRoute[]
 
   @@map("properties")
 }
@@ -95,12 +96,33 @@ model AdAccount {
   accountName       String
   currency          String   @db.Char(3) // ISO 4217, e.g. "IDR"
 
-  property     Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  metricsDaily MetricsDaily[]
+  property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  metricsDaily   MetricsDaily[]
+  campaignRoutes CampaignRoute[]
 
   @@unique([platform, externalAccountId])
   @@index([propertyId])
   @@map("ad_accounts")
+}
+
+/// Routes campaigns within a shared ad account to different properties by
+/// matching the campaign name (case-insensitive substring, or a regex).
+/// Unmatched campaigns fall back to the ad account's own propertyId — so one
+/// ad account can feed several properties, split by campaign.
+model CampaignRoute {
+  id          String   @id @default(cuid())
+  adAccountId String
+  pattern     String // matched against the campaign name
+  isRegex     Boolean  @default(false)
+  propertyId  String
+  priority    Int      @default(0) // higher wins when multiple patterns match
+  createdAt   DateTime @default(now())
+
+  adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  property  Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([adAccountId])
+  @@map("campaign_routes")
 }
 
 /// THE unified daily metrics table — both Google and Meta normalize into this.

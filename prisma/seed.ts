@@ -7,8 +7,8 @@ const prisma = new PrismaClient({ adapter });
 
 // Blue Karma properties. Idempotent: safe to run repeatedly (upsert on code).
 const PROPERTIES = [
-  { code: "BKDS", name: "Blue Karma Seminyak", active: true },
-  { code: "BKDU", name: "Blue Karma Ubud", active: true },
+  { code: "BKDS", name: "Blue Karma Dijiwa Seminyak", active: true },
+  { code: "BKDU", name: "Blue Karma Dijiwa Ubud", active: true },
   { code: "BKV", name: "Blue Karma Village", active: true },
   { code: "ORACLE", name: "Oracle Yacht", active: false }, // hidden from the dashboard
 ] as const;
