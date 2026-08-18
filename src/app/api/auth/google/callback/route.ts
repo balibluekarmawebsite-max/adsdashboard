@@ -17,8 +17,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Admins only" }, { status: 403 });
   }
 
+  // Redirect to the app's canonical URL (behind the proxy, request.url's host is
+  // the internal 127.0.0.1:3001, so prefer AUTH_URL).
   const { searchParams, origin } = new URL(request.url);
-  const back = (status: string) => NextResponse.redirect(`${origin}/dashboard?google=${status}`);
+  const base = process.env.AUTH_URL ?? origin;
+  const back = (status: string) => NextResponse.redirect(`${base}/dashboard?google=${status}`);
 
   if (searchParams.get("error")) return back("denied");
   const code = searchParams.get("code");
