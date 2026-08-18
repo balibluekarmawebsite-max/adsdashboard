@@ -26,6 +26,11 @@ export function canManageUsers(actor: Role): boolean {
   return actor === "OWNER" || actor === "ADMIN";
 }
 
+/** Who may connect or manage platform integrations (Google / Meta). */
+export function canManageConnections(actor: Role): boolean {
+  return actor === "OWNER" || actor === "ADMIN";
+}
+
 /** Roles this actor may assign when creating or editing a user. */
 export function assignableRoles(actor: Role): Role[] {
   if (actor === "OWNER") return ["OWNER", "ADMIN", "MEMBER"];

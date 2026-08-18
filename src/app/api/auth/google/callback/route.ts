@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
+import { asRole, canManageConnections } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import { encryptSecret } from "@/lib/crypto";
 import { exchangeCodeForTokens } from "@/lib/google/oauth";
@@ -12,8 +13,8 @@ export const runtime = "nodejs";
 // ENCRYPTED in platformConnections. Redirects back to the dashboard with status.
 export async function GET(request: Request) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
-    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  if (!canManageConnections(asRole(session?.user?.role))) {
+    return NextResponse.json({ error: "Admins only" }, { status: 403 });
   }
 
   const { searchParams, origin } = new URL(request.url);
