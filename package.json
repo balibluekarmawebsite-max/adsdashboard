@@ -24,7 +24,8 @@
     "link:account": "tsx scripts/link-ad-account.ts",
     "route:campaign": "tsx scripts/route-campaign.ts",
     "meta:accounts": "tsx scripts/list-meta-accounts.ts",
-    "meta:actions": "tsx scripts/list-meta-actions.ts"
+    "meta:actions": "tsx scripts/list-meta-actions.ts",
+    "data:inspect": "tsx scripts/inspect-data.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
