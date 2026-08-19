@@ -122,6 +122,23 @@ async function getTotals(where: Where): Promise<Totals> {
 }
 
 /**
+ * A cheap fingerprint of the rows behind a filter — row count, total spend, and
+ * the latest row-update time. Folded into the AI-summary cache key so a cached
+ * summary is reused only while the underlying data is unchanged (a re-sync that
+ * touches these rows changes the signature and forces a fresh summary).
+ */
+export async function dataSignature(filter: MetricsFilter): Promise<string> {
+  const agg = await prisma.metricsDaily.aggregate({
+    where: whereFor(filter),
+    _count: { _all: true },
+    _sum: { spend: true },
+    _max: { updatedAt: true },
+  });
+  const spend = Math.round(Number(agg._sum.spend ?? 0));
+  return `${agg._count._all}:${spend}:${agg._max.updatedAt?.toISOString() ?? "none"}`;
+}
+
+/**
  * Currency safety: if the filtered rows span more than one currency, summing
  * spend across them is meaningless — flag it instead of silently summing.
  */

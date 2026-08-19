@@ -156,6 +156,30 @@ model MetricsDaily {
   @@map("metrics_daily")
 }
 
+/// Cache + history of AI-generated insight summaries (Phase 9).
+/// The AI only phrases pre-computed numbers — `inputSnapshot` stores exactly
+/// what was sent to the model, so every summary stays auditable against the
+/// figures behind it. `filtersHash` folds in a signature of the underlying data
+/// so a cached summary is served only while the view AND its data are unchanged.
+model AiSummary {
+  id            String   @id @default(cuid())
+  filtersHash   String // hash of (from,to,property,platform,language,dataSignature)
+  periodFrom    DateTime @db.Date
+  periodTo      DateTime @db.Date
+  property      String   @default("all")
+  platform      String   @default("all")
+  language      String   @default("en")
+  model         String
+  summaryText   String
+  inputSnapshot Json
+  tokenUsage    Int      @default(0)
+  generatedAt   DateTime @default(now())
+
+  @@index([filtersHash])
+  @@index([generatedAt])
+  @@map("ai_summaries")
+}
+
 /// Audit of every sync run (what ran, how many rows, success/error).
 model SyncLog {
   id           String     @id @default(cuid())
