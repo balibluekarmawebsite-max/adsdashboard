@@ -7,6 +7,7 @@ import { Trash2, Pencil, Loader2, Save } from "lucide-react";
 import { formatMoney, formatRoas } from "@/lib/format";
 import { MONTH_NAMES, monthLabel } from "@/lib/revenue/constants";
 import type { RevenueRow } from "@/lib/revenue/query";
+import { RevenueUpload } from "./revenue-upload";
 
 type PropertyOption = { code: string; name: string };
 
@@ -195,6 +196,15 @@ export function RevenueManager({ properties }: { properties: PropertyOption[] })
         </form>
         {error && <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
       </motion.section>
+
+      {/* AI document upload */}
+      <RevenueUpload
+        properties={properties}
+        defaultYear={year}
+        defaultMonth={month}
+        years={years}
+        onSaved={() => mutate()}
+      />
 
       {/* History */}
       <motion.section
