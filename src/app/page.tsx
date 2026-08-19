@@ -5,7 +5,6 @@ const PROPERTIES = [
   { code: "BKDS", name: "Blue Karma Seminyak" },
   { code: "BKDU", name: "Blue Karma Ubud" },
   { code: "BKV", name: "Blue Karma Village" },
-  { code: "ORACLE", name: "Oracle Yacht" },
 ] as const;
 
 export default function Home() {
@@ -23,16 +22,18 @@ export default function Home() {
 
         <span className="border-border bg-card/60 text-muted-foreground mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
           <span className="bg-brand-sky h-1.5 w-1.5 rounded-full" />
-          Internal · Ads Analytics
+          Internal tool · Blue Karma Secrets
         </span>
 
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          Ads Analytics Dashboard
+          Blue Karma Ads Dashboard
         </h1>
 
-        <p className="text-muted-foreground mt-4 max-w-md text-lg leading-relaxed text-balance">
-          Google &amp; Meta ad performance for every property — pulled daily, unified, and ready to
-          read at a glance.
+        <p className="text-muted-foreground mt-4 max-w-lg text-lg leading-relaxed text-balance">
+          The internal advertising analytics dashboard for Blue Karma Secrets. It securely connects
+          to our own Google Ads and Meta (Facebook &amp; Instagram) accounts to pull daily campaign
+          performance — spend, reach, conversions, and ROAS — and unifies it across our properties in
+          one private view.
         </p>
 
         {/* Property chips */}
@@ -56,7 +57,7 @@ export default function Home() {
           >
             Sign in
           </Link>
-          <p className="text-muted-foreground text-xs">Phase 2 of 8 · database &amp; auth ready</p>
+          <p className="text-muted-foreground text-xs">Authorized Blue Karma team members only</p>
         </div>
       </div>
 
