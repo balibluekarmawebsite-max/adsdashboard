@@ -60,8 +60,12 @@ export default function Home() {
         </div>
       </div>
 
-      <footer className="text-muted-foreground/70 absolute bottom-6 font-mono text-xs">
-        ads.bluekarmasecrets.com
+      <footer className="text-muted-foreground/70 absolute bottom-6 flex items-center gap-3 font-mono text-xs">
+        <span>ads.bluekarmasecrets.com</span>
+        <span aria-hidden>·</span>
+        <Link href="/privacy" className="hover:text-foreground transition-colors">
+          Privacy
+        </Link>
       </footer>
     </main>
   );
