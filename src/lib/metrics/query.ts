@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/api/errors";
 import type { PlatformName } from "@/lib/sync/types";
+import { revenueForRange } from "@/lib/revenue/roas";
 import { summarize, pctChange, type Totals, type Summary } from "./derive";
 
 // Prisma sums come back as number | Decimal | null — coerce to a plain number.
@@ -165,14 +166,26 @@ export async function summary(filter: MetricsFilter) {
   const prevFrom = new Date(prevTo);
   prevFrom.setUTCDate(prevFrom.getUTCDate() - (filter.days - 1));
 
-  const [curTotals, prevTotals, currency] = await Promise.all([
+  // Revenue is a per-property monthly total (not per platform), so revenue-based
+  // ROAS is only meaningful blended — compute it when no single platform is set.
+  const blended = !filter.platform;
+
+  const [curTotals, prevTotals, currency, curRevenue, prevRevenue] = await Promise.all([
     getTotals(where),
     getTotals(whereFor(filter, prevFrom, prevTo)),
     getCurrencyInfo(where),
+    blended ? revenueForRange(filter.from, filter.to, filter.propertyId) : Promise.resolve(0),
+    blended ? revenueForRange(prevFrom, prevTo, filter.propertyId) : Promise.resolve(0),
   ]);
 
   const current = summarize(curTotals);
   const previous = summarize(prevTotals);
+
+  // Prefer revenue ÷ spend for ROAS whenever revenue exists for the range.
+  if (blended && curRevenue > 0) current.roas = current.spend > 0 ? curRevenue / current.spend : null;
+  if (blended && prevRevenue > 0)
+    previous.roas = previous.spend > 0 ? prevRevenue / previous.spend : null;
+
   const changePct = {} as Record<keyof Summary, number | null>;
   (Object.keys(current) as (keyof Summary)[]).forEach((k) => {
     changePct[k] = pctChange(current[k], previous[k]);
@@ -183,6 +196,9 @@ export async function summary(filter: MetricsFilter) {
     previousRange: { from: iso(prevFrom), to: iso(prevTo) },
     filters: { property: filter.propertyId ?? "all", platform: filter.platform ?? "all" },
     ...currency,
+    revenue: blended
+      ? { now: curRevenue, prev: prevRevenue, changePct: pctChange(curRevenue, prevRevenue) }
+      : null,
     current,
     previous,
     changePct,
@@ -224,15 +240,28 @@ export async function byProperty(filter: MetricsFilter) {
     select: { id: true, code: true, name: true },
   });
   const byId = new Map(props.map((p) => [p.id, p]));
-  const properties = groups
-    .filter((g) => byId.has(g.propertyId)) // drop hidden/inactive properties
-    .map((g) => ({
-      propertyId: g.propertyId,
-      code: byId.get(g.propertyId)?.code ?? null,
-      name: byId.get(g.propertyId)?.name ?? null,
-      ...summarize(totalsFromSum(g._sum)),
-    }))
-    .sort((a, b) => b.spend - a.spend);
+  const blended = !filter.platform;
+  const properties = (
+    await Promise.all(
+      groups
+        .filter((g) => byId.has(g.propertyId)) // drop hidden/inactive properties
+        .map(async (g) => {
+          const s = summarize(totalsFromSum(g._sum));
+          let revenue: number | null = null;
+          if (blended) {
+            revenue = await revenueForRange(filter.from, filter.to, g.propertyId);
+            if (revenue > 0) s.roas = s.spend > 0 ? revenue / s.spend : null;
+          }
+          return {
+            propertyId: g.propertyId,
+            code: byId.get(g.propertyId)?.code ?? null,
+            name: byId.get(g.propertyId)?.name ?? null,
+            revenue,
+            ...s,
+          };
+        }),
+    )
+  ).sort((a, b) => b.spend - a.spend);
   return { range: rangeMeta(filter), properties };
 }
 

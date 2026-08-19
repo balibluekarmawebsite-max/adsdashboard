@@ -42,6 +42,9 @@ export interface InsightSnapshot {
     conversions: Kpi;
     roas: Kpi;
   };
+  /** Blended monthly revenue allocated to this range (null when a single
+   *  platform is selected, since revenue isn't per-platform). ROAS above uses it. */
+  revenue: Kpi | null;
   byPlatform: Array<{
     platform: string;
     spend: number | null;
@@ -147,6 +150,9 @@ export async function buildSnapshot(filter: MetricsFilter): Promise<SnapshotResu
       conversions: kpi("conversions"),
       roas: kpi("roas"),
     },
+    revenue: sum.revenue
+      ? { now: int(sum.revenue.now), prev: int(sum.revenue.prev), changePct: dec(sum.revenue.changePct) }
+      : null,
     byPlatform: platforms.platforms.map((p) => ({
       platform: p.platform,
       spend: int(p.spend),
