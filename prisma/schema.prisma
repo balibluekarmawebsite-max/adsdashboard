@@ -56,6 +56,7 @@ model Property {
   adAccounts     AdAccount[]
   metricsDaily   MetricsDaily[]
   campaignRoutes CampaignRoute[]
+  revenue        RevenueMonthly[]
 
   @@map("properties")
 }
@@ -178,6 +179,28 @@ model AiSummary {
   @@index([filtersHash])
   @@index([generatedAt])
   @@map("ai_summaries")
+}
+
+/// Monthly revenue per property, entered/uploaded by the team (not from the ad
+/// platforms). Drives revenue-based ROAS (revenue ÷ ad spend). One row per
+/// property per calendar month; upserted so a correction overwrites cleanly.
+model RevenueMonthly {
+  id         String   @id @default(cuid())
+  propertyId String
+  year       Int
+  month      Int // 1–12
+  amount     Decimal  @db.Decimal(18, 4) // money — Decimal, never Float
+  currency   String   @db.Char(3) // ISO 4217, e.g. "IDR"
+  source     String? // "manual" or "upload:<filename>"
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, year, month])
+  @@index([propertyId])
+  @@map("revenue_monthly")
 }
 
 /// Audit of every sync run (what ran, how many rows, success/error).

@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, Wallet } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
-import { asRole, canManageUsers } from "@/lib/rbac";
+import { asRole, canManageUsers, canManageRevenue } from "@/lib/rbac";
 import { useFilters } from "@/components/providers/filters-provider";
 import type { PropertyOption } from "./shell";
 
@@ -21,6 +21,7 @@ export function Sidebar({
   const pathname = usePathname();
   const isOverview = pathname === "/dashboard";
   const showTeam = canManageUsers(asRole(user.role));
+  const showRevenue = canManageRevenue(asRole(user.role));
 
   return (
     <aside className="bg-sidebar border-sidebar-border hidden w-60 shrink-0 flex-col border-r lg:flex">
@@ -40,6 +41,15 @@ export function Sidebar({
           >
             Overview
           </NavLink>
+          {showRevenue && (
+            <NavLink
+              href="/dashboard/revenue"
+              active={pathname.startsWith("/dashboard/revenue")}
+              icon={<Wallet className="size-4" />}
+            >
+              Revenue
+            </NavLink>
+          )}
           {showTeam && (
             <NavLink
               href="/dashboard/users"
