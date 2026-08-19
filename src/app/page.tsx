@@ -66,6 +66,10 @@ export default function Home() {
         <Link href="/privacy" className="hover:text-foreground transition-colors">
           Privacy
         </Link>
+        <span aria-hidden>·</span>
+        <Link href="/terms" className="hover:text-foreground transition-colors">
+          Terms
+        </Link>
       </footer>
     </main>
   );

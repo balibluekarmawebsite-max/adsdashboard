@@ -14,9 +14,13 @@ export default async function LoginPage() {
         <p className="text-muted-foreground text-sm">Access the ads analytics dashboard</p>
       </div>
       <LoginForm />
-      <p className="text-muted-foreground/70 text-center text-xs">
+      <p className="text-muted-foreground/70 flex items-center justify-center gap-2 text-center text-xs">
         <Link href="/privacy" className="hover:text-foreground transition-colors">
           Privacy Policy
+        </Link>
+        <span aria-hidden>·</span>
+        <Link href="/terms" className="hover:text-foreground transition-colors">
+          Terms of Service
         </Link>
       </p>
     </div>
