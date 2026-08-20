@@ -13,9 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ads Analytics Dashboard",
+  title: "Blue Karma Ads Dashboard",
   description:
     "Unified Google & Meta advertising analytics for Blue Karma properties — pulled daily into one dashboard.",
+  // Google Search Console site-verification (renders the google-site-verification
+  // meta tag into <head> on every page, including the home page Google checks).
+  verification: {
+    google: "lIA0poNaKnRZqzKhDIJSjlV8fzCo79CfGg2okv0NubU",
+  },
 };
 
 // Applied before paint so there's no flash: default is light; only an explicit
