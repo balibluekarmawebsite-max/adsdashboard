@@ -47,26 +47,43 @@ export function KpiRow() {
   const moneyExact = (n: number) => formatMoney(n, currency);
 
   const kpis: {
-    key: MetricKey;
+    key: string;
     label: string;
     value: number | null;
     format: (n: number) => string;
+    delta: number | null;
+    spark: number[];
   }[] = [
-    { key: "spend", label: "Spend", value: c.spend, format: money },
-    { key: "impressions", label: "Impressions", value: c.impressions, format: formatCompact },
-    { key: "clicks", label: "Clicks", value: c.clicks, format: formatCompact },
-    { key: "ctr", label: "CTR", value: c.ctr, format: (n) => formatRatioPct(n) },
-    { key: "cpc", label: "CPC", value: c.cpc, format: moneyExact },
-    { key: "conversions", label: "Conversions", value: c.conversions, format: formatCompact },
-    { key: "roas", label: "ROAS", value: c.roas, format: (n) => formatRoas(n) },
+    { key: "spend", label: "Spend", value: c.spend, format: money, delta: chg.spend, spark: spark("spend") },
+    { key: "impressions", label: "Impressions", value: c.impressions, format: formatCompact, delta: chg.impressions, spark: spark("impressions") },
+    { key: "clicks", label: "Clicks", value: c.clicks, format: formatCompact, delta: chg.clicks, spark: spark("clicks") },
+    { key: "ctr", label: "CTR", value: c.ctr, format: (n) => formatRatioPct(n), delta: chg.ctr, spark: spark("ctr") },
+    { key: "cpc", label: "CPC", value: c.cpc, format: moneyExact, delta: chg.cpc, spark: spark("cpc") },
+    { key: "conversions", label: "Conversions", value: c.conversions, format: formatCompact, delta: chg.conversions, spark: spark("conversions") },
   ];
+
+  // Revenue is blended (all platforms) — summary.revenue is null when a single
+  // platform is selected, so the tile only appears where ROAS is meaningful.
+  if (summary.revenue) {
+    kpis.push({
+      key: "revenue",
+      label: "Revenue",
+      value: summary.revenue.now,
+      format: moneyExact,
+      delta: summary.revenue.changePct,
+      spark: [],
+    });
+  }
+  kpis.push({ key: "roas", label: "ROAS", value: c.roas, format: (n) => formatRoas(n), delta: chg.roas, spark: spark("roas") });
+
+  const cols = summary.revenue ? "xl:grid-cols-8" : "xl:grid-cols-7";
 
   return (
     <motion.div
       variants={container}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7"
+      className={`grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 ${cols}`}
     >
       {kpis.map((k) => (
         <motion.div key={k.key} variants={item}>
@@ -74,9 +91,9 @@ export function KpiRow() {
             label={k.label}
             value={k.value}
             format={k.format}
-            delta={chg[k.key]}
-            sentiment={sentiment(k.key, chg[k.key])}
-            spark={spark(k.key)}
+            delta={k.delta}
+            sentiment={sentiment(k.key, k.delta)}
+            spark={k.spark}
           />
         </motion.div>
       ))}

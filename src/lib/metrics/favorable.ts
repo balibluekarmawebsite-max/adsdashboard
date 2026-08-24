@@ -12,6 +12,7 @@ const FAVORABLE: Record<string, Direction> = {
   ctr: "up",
   cvr: "up",
   roas: "up",
+  revenue: "up",
   cpc: "down",
   cpm: "down",
   spend: "neutral",
