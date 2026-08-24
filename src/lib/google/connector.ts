@@ -1,3 +1,4 @@
+import { inspect } from "node:util";
 import type { NormalizedMetricRow } from "@/lib/sync/types";
 import { getGoogleCustomer } from "./client";
 
@@ -60,20 +61,45 @@ export function normalizeGoogleRows(
 }
 
 /**
- * Turn an opaque google-ads-api failure into an actionable message. The library
- * can crash while parsing certain API errors (e.g. SERVICE_DISABLED throws a
- * "reading 'get'" TypeError), which otherwise hides the real cause.
+ * google-ads-api throws a structured failure object (an `errors` array with
+ * message + error_code), which `String(err)` renders as "[object Object]".
+ * Dig out the real detail; fall back to a full inspect so nothing is hidden.
+ */
+function describeGoogleAdsError(err: unknown): string {
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const errors = e.errors as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(errors) && errors.length > 0) {
+      const parts = errors.map((item) => {
+        const message = typeof item.message === "string" ? item.message : "";
+        const codeObj = (item.error_code ?? {}) as Record<string, unknown>;
+        const codeKey = Object.keys(codeObj)[0];
+        const code = codeKey ? `${codeKey}=${String(codeObj[codeKey])}` : "";
+        return [code, message].filter(Boolean).join(": ");
+      });
+      const reqId = typeof e.request_id === "string" ? ` (request_id: ${e.request_id})` : "";
+      return parts.join(" | ") + reqId;
+    }
+    if (typeof e.message === "string" && e.message) return e.message;
+    return inspect(err, { depth: 4 });
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * Turn an opaque google-ads-api failure into an actionable Error. Adds a
+ * setup hint for the common not-enabled / not-approved cases.
  */
 function explainGoogleAdsError(err: unknown): Error {
-  const msg = err instanceof Error ? err.message : String(err);
-  if (/reading 'get'|No data type found|SERVICE_DISABLED|not been used|is disabled/i.test(msg)) {
+  const detail = describeGoogleAdsError(err);
+  if (/reading 'get'|No data type found|SERVICE_DISABLED|DEVELOPER_TOKEN|not been used|is disabled|not approved/i.test(detail)) {
     return new Error(
-      `Google Ads API call failed (${msg}). Most likely the Google Ads API is not enabled for your ` +
-        `Cloud project — enable it at https://console.cloud.google.com/apis/library/googleads.googleapis.com ` +
-        `— or the developer token doesn't yet have Basic Access. Fix that and retry.`,
+      `${detail} — confirm the Google Ads API is enabled ` +
+        `(https://console.cloud.google.com/apis/library/googleads.googleapis.com) and that your ` +
+        `developer token has Basic Access approved in API Center.`,
     );
   }
-  return err instanceof Error ? err : new Error(msg);
+  return new Error(`Google Ads API call failed: ${detail}`);
 }
 
 /** Fetch + normalize one account's daily campaign metrics for a date range. */
