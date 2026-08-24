@@ -59,6 +59,23 @@ export function normalizeGoogleRows(
   });
 }
 
+/**
+ * Turn an opaque google-ads-api failure into an actionable message. The library
+ * can crash while parsing certain API errors (e.g. SERVICE_DISABLED throws a
+ * "reading 'get'" TypeError), which otherwise hides the real cause.
+ */
+function explainGoogleAdsError(err: unknown): Error {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/reading 'get'|No data type found|SERVICE_DISABLED|not been used|is disabled/i.test(msg)) {
+    return new Error(
+      `Google Ads API call failed (${msg}). Most likely the Google Ads API is not enabled for your ` +
+        `Cloud project — enable it at https://console.cloud.google.com/apis/library/googleads.googleapis.com ` +
+        `— or the developer token doesn't yet have Basic Access. Fix that and retry.`,
+    );
+  }
+  return err instanceof Error ? err : new Error(msg);
+}
+
 /** Fetch + normalize one account's daily campaign metrics for a date range. */
 export async function fetchDailyMetrics(
   externalAccountId: string,
@@ -67,6 +84,11 @@ export async function fetchDailyMetrics(
   ctx: NormalizeContext,
 ): Promise<NormalizedMetricRow[]> {
   const customer = await getGoogleCustomer(externalAccountId);
-  const rows = await customer.query<GoogleAdsRow[]>(buildCampaignGaql(startDate, endDate));
+  let rows: GoogleAdsRow[];
+  try {
+    rows = await customer.query<GoogleAdsRow[]>(buildCampaignGaql(startDate, endDate));
+  } catch (err) {
+    throw explainGoogleAdsError(err);
+  }
   return normalizeGoogleRows(rows, ctx);
 }
