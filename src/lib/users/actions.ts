@@ -82,6 +82,46 @@ export async function updateUserRole(userId: string, nextRole: Role): Promise<Us
   return { success: "Role updated." };
 }
 
+/**
+ * Set which properties a MEMBER may see. An empty list means unrestricted (all
+ * properties). Owners/Admins are always unrestricted, so this is rejected for
+ * them. Owners/Admins only.
+ */
+export async function setUserProperties(
+  userId: string,
+  propertyCodes: string[],
+): Promise<UserActionState> {
+  const me = await currentActor();
+  if (!me || !canManageUsers(me.role)) return { error: "You are not allowed to manage access." };
+
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) return { error: "User not found." };
+  const targetRole = asRole(target.role);
+  if (!canModifyUser(me.role, targetRole)) return { error: "You can't modify that user." };
+  if (targetRole !== "MEMBER") return { error: "Owners and Admins always see every property." };
+
+  const codes = Array.from(new Set(propertyCodes.filter(Boolean)));
+  const properties = codes.length
+    ? await prisma.property.findMany({ where: { code: { in: codes } }, select: { id: true } })
+    : [];
+  const ids = properties.map((p) => p.id);
+
+  // Replace the whole set atomically.
+  await prisma.$transaction([
+    prisma.userProperty.deleteMany({ where: { userId } }),
+    ...(ids.length
+      ? [prisma.userProperty.createMany({ data: ids.map((propertyId) => ({ userId, propertyId })) })]
+      : []),
+  ]);
+
+  revalidatePath("/dashboard/users");
+  return {
+    success: ids.length
+      ? `Access updated — ${ids.length} ${ids.length === 1 ? "property" : "properties"}.`
+      : "Access set to all properties.",
+  };
+}
+
 /** Remove a user, within the actor's authority. */
 export async function deleteUser(userId: string): Promise<UserActionState> {
   const me = await currentActor();

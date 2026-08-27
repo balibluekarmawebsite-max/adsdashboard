@@ -11,13 +11,18 @@ const utcDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getU
 export async function revenueForRange(
   from: Date,
   to: Date,
-  propertyId?: string,
+  opts?: { propertyId?: string; propertyIds?: string[] },
 ): Promise<number> {
-  // A specific property → just its revenue. Otherwise the blended/"all" total,
-  // which is scoped to top-level hotels so outlet revenue isn't folded into the
-  // hotel ROAS (outlets are always addressed by their own propertyId).
+  // A specific property → just its revenue. A scoped set (a restricted user's
+  // allowed properties) → those. Otherwise the blended total, scoped to
+  // top-level hotels so outlet revenue isn't folded into the hotel ROAS.
+  const where = opts?.propertyId
+    ? { propertyId: opts.propertyId }
+    : opts?.propertyIds
+      ? { propertyId: { in: opts.propertyIds } }
+      : { property: { parentId: null } };
   const rows = await prisma.revenueMonthly.findMany({
-    where: propertyId ? { propertyId } : { property: { parentId: null } },
+    where,
     select: { year: true, month: true, amount: true },
   });
 

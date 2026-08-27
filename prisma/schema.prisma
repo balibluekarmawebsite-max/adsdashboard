@@ -80,6 +80,7 @@ model Property {
   campaignRoutes CampaignRoute[]
   revenue        RevenueMonthly[]
   campaigns      Campaign[]
+  userAccess     UserProperty[]
 
   @@index([parentId])
   @@map("properties")
@@ -94,7 +95,26 @@ model User {
   role         Role     @default(MEMBER)
   createdAt    DateTime @default(now())
 
+  propertyAccess UserProperty[]
+
   @@map("users")
+}
+
+/// Which properties a MEMBER may see. A member with no rows sees everything
+/// (unrestricted); adding rows limits them to exactly those properties (hotels
+/// and/or outlets). Owners and Admins are always unrestricted, so they get no
+/// rows here.
+model UserProperty {
+  id         String @id @default(cuid())
+  userId     String
+  propertyId String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@map("user_properties")
 }
 
 /// One row per connected platform account. The token is stored ENCRYPTED

@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { PlatformName } from "@/lib/sync/types";
 import { revenueForRange } from "@/lib/revenue/roas";
 import { includedCampaignFilter } from "@/lib/campaigns/query";
+import { allowedPropertyIds } from "@/lib/auth/scope";
 import { summarize, pctChange, type Totals, type Summary } from "./derive";
 
 // Prisma sums come back as number | Decimal | null — coerce to a plain number.
@@ -88,6 +89,9 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
     platform = platformParam;
   }
 
+  // Per-user access: null = unrestricted, else the ids this user may see.
+  const allowed = await allowedPropertyIds();
+
   let propertyId: string | undefined;
   const propertyParam = sp.get("property");
   if (propertyParam && propertyParam !== "all") {
@@ -96,14 +100,19 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
       select: { id: true },
     });
     if (!property) throw new ApiError(400, `Unknown property "${propertyParam}"`);
+    if (allowed && !allowed.includes(property.id)) {
+      throw new ApiError(403, "You don't have access to that property.");
+    }
     propertyId = property.id;
   }
 
   const days = Math.round((to.date.getTime() - from.date.getTime()) / 86_400_000) + 1;
   // Restrict the report to campaigns marked "included" (null = registry empty).
   const includedCampaignIds = (await includedCampaignFilter()) ?? undefined;
-  // Blended/"all" view: hotels only, so outlets are never mixed into the totals.
-  const propertyIds = propertyId ? undefined : await topLevelPropertyIds();
+  // Scope the blended/"all" view: a restricted user sees the sum of exactly
+  // their allowed properties; everyone else sees top-level hotels (so outlets
+  // are never mixed into the blended total).
+  const propertyIds = propertyId ? undefined : (allowed ?? (await topLevelPropertyIds()));
   return {
     from: from.date,
     to: to.date,
@@ -205,8 +214,18 @@ export async function summary(filter: MetricsFilter) {
     getTotals(where),
     getTotals(whereFor(filter, prevFrom, prevTo)),
     getCurrencyInfo(where),
-    blended ? revenueForRange(filter.from, filter.to, filter.propertyId) : Promise.resolve(0),
-    blended ? revenueForRange(prevFrom, prevTo, filter.propertyId) : Promise.resolve(0),
+    blended
+      ? revenueForRange(filter.from, filter.to, {
+          propertyId: filter.propertyId,
+          propertyIds: filter.propertyIds,
+        })
+      : Promise.resolve(0),
+    blended
+      ? revenueForRange(prevFrom, prevTo, {
+          propertyId: filter.propertyId,
+          propertyIds: filter.propertyIds,
+        })
+      : Promise.resolve(0),
   ]);
 
   const current = summarize(curTotals);
@@ -280,7 +299,7 @@ export async function byProperty(filter: MetricsFilter) {
           const s = summarize(totalsFromSum(g._sum));
           let revenue: number | null = null;
           if (blended) {
-            revenue = await revenueForRange(filter.from, filter.to, g.propertyId);
+            revenue = await revenueForRange(filter.from, filter.to, { propertyId: g.propertyId });
             if (revenue > 0) s.roas = s.spend > 0 ? revenue / s.spend : null;
           }
           return {

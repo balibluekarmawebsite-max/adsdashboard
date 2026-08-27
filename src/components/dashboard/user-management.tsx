@@ -1,14 +1,21 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { groupByHotel, kindLabel, type PropertyOption } from "@/lib/properties";
 import { assignableRoles, canModifyUser, ROLE_LABEL, type Role } from "@/lib/rbac";
-import { createUser, deleteUser, updateUserRole, type UserActionState } from "@/lib/users/actions";
+import {
+  createUser,
+  deleteUser,
+  setUserProperties,
+  updateUserRole,
+  type UserActionState,
+} from "@/lib/users/actions";
 
 interface Row {
   id: string;
@@ -16,6 +23,7 @@ interface Row {
   name: string | null;
   role: Role;
   createdAt: string;
+  access: string[]; // property codes; empty = all
 }
 
 const ROLE_BADGE: Record<Role, string> = {
@@ -35,10 +43,12 @@ function randomPassword(len = 14) {
 export function UserManagement({
   currentUserId,
   currentRole,
+  properties,
   users,
 }: {
   currentUserId: string;
   currentRole: Role;
+  properties: PropertyOption[];
   users: Row[];
 }) {
   const router = useRouter();
@@ -190,6 +200,7 @@ export function UserManagement({
               <tr className="border-border text-muted-foreground border-t text-left text-xs tracking-wide uppercase">
                 <th className="px-5 py-2 font-medium">User</th>
                 <th className="px-5 py-2 font-medium">Role</th>
+                <th className="px-5 py-2 font-medium">Access</th>
                 <th className="px-5 py-2 font-medium">Added</th>
                 <th className="px-5 py-2 text-right font-medium">Actions</th>
               </tr>
@@ -214,6 +225,17 @@ export function UserManagement({
                         {ROLE_LABEL[u.role]}
                       </span>
                       {isSelf && <span className="text-muted-foreground ml-2 text-xs">you</span>}
+                    </td>
+                    <td className="px-5 py-3">
+                      <AccessCell
+                        user={u}
+                        properties={properties}
+                        disabled={rowBusy}
+                        onSaved={(msg) => {
+                          setRowMsg(msg);
+                          router.refresh();
+                        }}
+                      />
                     </td>
                     <td className="text-muted-foreground px-5 py-3 whitespace-nowrap">
                       {new Date(u.createdAt).toLocaleDateString()}
@@ -259,6 +281,139 @@ export function UserManagement({
           </table>
         </div>
       </section>
+    </div>
+  );
+}
+
+function CheckRow({
+  label,
+  checked,
+  onChange,
+  indent,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  indent?: boolean;
+}) {
+  return (
+    <label
+      className={cn(
+        "hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-xs",
+        indent && "ml-4",
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="accent-primary size-3.5"
+      />
+      <span className="truncate">{label}</span>
+    </label>
+  );
+}
+
+/** Per-member access control: pick specific units, or leave empty for all. */
+function AccessCell({
+  user,
+  properties,
+  disabled,
+  onSaved,
+}: {
+  user: Row;
+  properties: PropertyOption[];
+  disabled: boolean;
+  onSaved: (msg: UserActionState) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [sel, setSel] = useState<string[]>(user.access);
+  const [busy, startSave] = useTransition();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  // Owners and Admins are always unrestricted.
+  if (user.role !== "MEMBER") {
+    return <span className="text-muted-foreground text-xs">All properties</span>;
+  }
+
+  const groups = groupByHotel(properties);
+  const label =
+    user.access.length === 0
+      ? "All properties"
+      : `${user.access.length} ${user.access.length === 1 ? "property" : "properties"}`;
+
+  const toggle = (code: string) =>
+    setSel((s) => (s.includes(code) ? s.filter((c) => c !== code) : [...s, code]));
+
+  function save() {
+    startSave(async () => {
+      const res = await setUserProperties(user.id, sel);
+      onSaved(res);
+      setOpen(false);
+    });
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          setSel(user.access);
+          setOpen((o) => !o);
+        }}
+        className="border-input bg-background hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50"
+      >
+        {label}
+        <ChevronDown className="size-3.5 opacity-70" />
+      </button>
+
+      {open && (
+        <div className="border-border bg-popover absolute left-0 z-30 mt-1 max-h-80 w-64 overflow-auto rounded-md border p-2 shadow-lg">
+          <p className="text-muted-foreground px-1 pb-1.5 text-[11px]">
+            Tick the units this member can see. Leave everything unticked for full access.
+          </p>
+          {groups.map(({ hotel, outlets }) => (
+            <div key={hotel.code} className="mb-1">
+              <CheckRow
+                label={`${hotel.code} · ${hotel.name}`}
+                checked={sel.includes(hotel.code)}
+                onChange={() => toggle(hotel.code)}
+              />
+              {outlets.map((o) => (
+                <CheckRow
+                  key={o.code}
+                  indent
+                  label={`${o.name} · ${kindLabel(o.kind)}`}
+                  checked={sel.includes(o.code)}
+                  onChange={() => toggle(o.code)}
+                />
+              ))}
+            </div>
+          ))}
+          <div className="border-border mt-1.5 flex items-center justify-between border-t pt-2">
+            <button
+              type="button"
+              onClick={() => setSel([])}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              Clear (all)
+            </button>
+            <Button size="sm" onClick={save} disabled={busy}>
+              {busy ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
