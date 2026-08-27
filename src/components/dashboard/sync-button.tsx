@@ -26,7 +26,13 @@ const OPTIONS: { key: PlatformArg; label: string }[] = [
   { key: "google", label: "Google only" },
 ];
 
-export function SyncButton({ onSynced }: { onSynced: () => void | Promise<unknown> }) {
+export function SyncButton({
+  period,
+  onSynced,
+}: {
+  period: { from: string; to: string; label: string };
+  onSynced: () => void | Promise<unknown>;
+}) {
   const [busy, setBusy] = useState<PlatformArg | null>(null);
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -46,7 +52,10 @@ export function SyncButton({ onSynced }: { onSynced: () => void | Promise<unknow
     setBusy(platform);
     setMsg(null);
     try {
-      const res = await fetch(`/api/sync?platform=${platform}`, { method: "POST" });
+      const res = await fetch(
+        `/api/sync?platform=${platform}&from=${period.from}&to=${period.to}`,
+        { method: "POST" },
+      );
       const body = (await res.json().catch(() => ({}))) as SyncResponse;
       if (!res.ok && res.status !== 207) throw new Error(body.error ?? "Sync failed");
 
@@ -60,7 +69,7 @@ export function SyncButton({ onSynced }: { onSynced: () => void | Promise<unknow
       } else {
         setMsg({
           ok: true,
-          text: `Pulled ${body.totalRows.toLocaleString("en-US")} rows from ${names}. New campaigns show in the top block to review.`,
+          text: `Pulled ${body.totalRows.toLocaleString("en-US")} rows for ${period.label} from ${names}. New campaigns show in the top block.`,
         });
       }
     } catch (err) {

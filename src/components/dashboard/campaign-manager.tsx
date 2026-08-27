@@ -246,13 +246,14 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Assign each campaign to the right unit and toggle whether it appears on the report. New
-            campaigns arrive{" "}
+            Assign each campaign to the right unit and toggle whether it appears on the report.
+            Refresh pulls the <span className="font-medium">period selected below</span> — pick a
+            month to backfill older campaigns. New campaigns arrive{" "}
             <span className="text-amber-600 dark:text-amber-400">off the report</span> until you
             switch them on.
           </p>
         </div>
-        <SyncButton onSynced={() => mutate()} />
+        <SyncButton period={period} onSynced={() => mutate()} />
       </div>
 
       {/* Spend period + bulk curation */}

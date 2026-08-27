@@ -5,7 +5,7 @@ import { syncAllGoogle } from "@/lib/google/sync";
 const arg = process.argv[2];
 const days = arg ? Number(arg) : undefined;
 
-syncAllGoogle(days)
+syncAllGoogle({ days })
   .then((summary) => {
     console.log(JSON.stringify(summary, null, 2));
     process.exit(summary.results.every((r) => r.ok) ? 0 : 1);

@@ -32,13 +32,13 @@ export function startScheduler(): void {
     async () => {
       console.log("[cron] daily sync starting");
       try {
-        const g = await syncAllGoogle(days);
+        const g = await syncAllGoogle({ days });
         console.log(`[cron] google: ${JSON.stringify(g.results)}`);
       } catch (e) {
         console.error("[cron] google sync failed", e);
       }
       try {
-        const m = await syncAllMeta(days);
+        const m = await syncAllMeta({ days });
         console.log(`[cron] meta: ${JSON.stringify(m.results)}`);
       } catch (e) {
         console.error("[cron] meta sync failed", e);

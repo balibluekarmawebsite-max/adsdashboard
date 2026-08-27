@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const days = daysParam ? Number(daysParam) : undefined;
 
   try {
-    const summary = await syncAllMeta(days);
+    const summary = await syncAllMeta({ days });
     return NextResponse.json(summary);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

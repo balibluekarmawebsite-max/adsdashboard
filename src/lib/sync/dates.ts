@@ -28,3 +28,26 @@ export function rollingWindow(days: number, now = new Date()): { start: string; 
 export function toDateColumn(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00.000Z`);
 }
+
+/**
+ * A sync's date window: an explicit start/end (YYYY-MM-DD) to backfill a
+ * specific period, or a rolling day count. When start+end are given they win;
+ * otherwise a rolling window of `days` (or the caller's default) is used.
+ */
+export interface SyncWindow {
+  start?: string;
+  end?: string;
+  days?: number;
+}
+
+export function resolveWindow(
+  opt: SyncWindow | undefined,
+  defaultDays: number,
+): { start: string; end: string } {
+  if (opt?.start && opt?.end) {
+    return opt.start <= opt.end
+      ? { start: opt.start, end: opt.end }
+      : { start: opt.end, end: opt.start };
+  }
+  return rollingWindow(opt?.days ?? defaultDays);
+}

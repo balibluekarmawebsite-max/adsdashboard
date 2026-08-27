@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { runAccountSync } from "@/lib/sync/metrics";
-import { rollingWindow } from "@/lib/sync/dates";
+import { resolveWindow, type SyncWindow } from "@/lib/sync/dates";
 import type { AccountSyncResult } from "@/lib/sync/types";
 import { loadRoutes, applyRoutes } from "@/lib/sync/routing";
 import { refreshCampaignRegistry } from "@/lib/campaigns/registry";
@@ -16,10 +16,14 @@ export interface MetaSyncSummary {
   results: AccountSyncResult[];
 }
 
-/** Pull the rolling window for every Meta ad account, one account at a time. */
-export async function syncAllMeta(days: number = DEFAULT_DAYS): Promise<MetaSyncSummary> {
+/**
+ * Pull metrics for every Meta ad account, one account at a time. Pass a
+ * `{ start, end }` window to backfill a specific period (e.g. a past month);
+ * otherwise the rolling default window is used.
+ */
+export async function syncAllMeta(opt?: SyncWindow): Promise<MetaSyncSummary> {
   const accounts = await prisma.adAccount.findMany({ where: { platform: "meta" } });
-  const { start, end } = rollingWindow(days);
+  const { start, end } = resolveWindow(opt, DEFAULT_DAYS);
 
   const results: AccountSyncResult[] = [];
   for (const account of accounts) {

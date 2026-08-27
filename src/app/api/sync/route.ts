@@ -4,10 +4,12 @@ import { asRole, canManageCampaigns } from "@/lib/rbac";
 import { syncAllGoogle } from "@/lib/google/sync";
 import { syncAllMeta } from "@/lib/meta/sync";
 import type { AccountSyncResult } from "@/lib/sync/types";
+import type { SyncWindow } from "@/lib/sync/dates";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // a full pull can take a while
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 type PlatformArg = "all" | "google" | "meta";
 
 interface PlatformOutcome {
@@ -18,10 +20,10 @@ interface PlatformOutcome {
   error?: string;
 }
 
-// POST /api/sync?platform=all|meta|google[&days=N]
-// Manually pull the rolling window and refresh the campaign registry, so new
-// campaigns show up on demand instead of waiting for the nightly sync.
-// Owner/Admin only.
+// POST /api/sync?platform=all|meta|google[&from=YYYY-MM-DD&to=YYYY-MM-DD | &days=N]
+// Manually pull metrics and refresh the campaign registry. With from+to it
+// backfills that exact period (e.g. a past month); otherwise it pulls the
+// rolling window. Owner/Admin only.
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,17 +32,22 @@ export async function POST(request: Request) {
 
   const url = new URL(request.url);
   const platform = (url.searchParams.get("platform") ?? "all") as PlatformArg;
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
   const daysParam = url.searchParams.get("days");
-  const days = daysParam ? Number(daysParam) : undefined;
+  const window: SyncWindow =
+    from && to && DATE_RE.test(from) && DATE_RE.test(to)
+      ? { start: from, end: to }
+      : { days: daysParam ? Number(daysParam) : undefined };
 
   const outcomes: PlatformOutcome[] = [];
 
   async function run(
     name: "google" | "meta",
-    fn: (days?: number) => Promise<{ accounts: number; results: AccountSyncResult[] }>,
+    fn: (opt?: SyncWindow) => Promise<{ accounts: number; results: AccountSyncResult[] }>,
   ) {
     try {
-      const summary = await fn(days);
+      const summary = await fn(window);
       const rows = summary.results.reduce((n, r) => n + r.rowsWritten, 0);
       const failed = summary.results.filter((r) => !r.ok);
       outcomes.push({
