@@ -4,10 +4,16 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useSWR from "swr";
-import { LayoutDashboard, Users, Wallet, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, Wallet, Megaphone, CalendarClock } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
-import { asRole, canManageUsers, canManageRevenue, canManageCampaigns } from "@/lib/rbac";
+import {
+  asRole,
+  canManageUsers,
+  canManageRevenue,
+  canManageCampaigns,
+  canManageReports,
+} from "@/lib/rbac";
 
 async function pendingFetcher(url: string): Promise<{ count: number }> {
   const res = await fetch(url);
@@ -30,6 +36,7 @@ export function Sidebar({
   const showTeam = canManageUsers(asRole(user.role));
   const showRevenue = canManageRevenue(asRole(user.role));
   const showCampaigns = canManageCampaigns(asRole(user.role));
+  const showReports = canManageReports(asRole(user.role));
   const { data: pending } = useSWR(
     showCampaigns ? "/api/campaigns/pending" : null,
     pendingFetcher,
@@ -76,6 +83,15 @@ export function Sidebar({
               icon={<Wallet className="size-4" />}
             >
               Revenue
+            </NavLink>
+          )}
+          {showReports && (
+            <NavLink
+              href="/dashboard/reports"
+              active={pathname.startsWith("/dashboard/reports")}
+              icon={<CalendarClock className="size-4" />}
+            >
+              Reports
             </NavLink>
           )}
           {showTeam && (

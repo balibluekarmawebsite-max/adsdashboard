@@ -126,6 +126,31 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
   };
 }
 
+/**
+ * Build a filter for a background/system job (scheduled reports) — no request,
+ * no per-user scoping. Unrestricted: the blended view covers top-level hotels.
+ */
+export async function systemMetricsFilter(
+  fromStr: string,
+  toStr: string,
+  propertyCode?: string | null,
+): Promise<MetricsFilter> {
+  const from = new Date(`${fromStr}T00:00:00.000Z`);
+  const to = new Date(`${toStr}T00:00:00.000Z`);
+  let propertyId: string | undefined;
+  if (propertyCode && propertyCode !== "all") {
+    const p = await prisma.property.findFirst({
+      where: { OR: [{ code: propertyCode }, { id: propertyCode }] },
+      select: { id: true },
+    });
+    propertyId = p?.id;
+  }
+  const days = Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1;
+  const includedCampaignIds = (await includedCampaignFilter()) ?? undefined;
+  const propertyIds = propertyId ? undefined : await topLevelPropertyIds();
+  return { from, to, fromStr, toStr, days, propertyId, propertyIds, includedCampaignIds };
+}
+
 type Where = {
   date: { gte: Date; lte: Date };
   propertyId?: string | { in: string[] };

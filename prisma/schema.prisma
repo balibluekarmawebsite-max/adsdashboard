@@ -56,6 +56,17 @@ enum CampaignReportStatus {
   excluded
 }
 
+/// What a schedule sends: a performance report, or a reminder to submit revenue.
+enum ReportKind {
+  report
+  revenue_reminder
+}
+
+enum ReportFrequency {
+  weekly
+  monthly
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -270,6 +281,27 @@ model Campaign {
   @@index([status])
   @@index([propertyId])
   @@map("campaigns")
+}
+
+/// A scheduled email: a weekly/monthly performance report, or a monthly
+/// reminder to submit last month's revenue. Fired by the in-process scheduler.
+model ReportSchedule {
+  id           String          @id @default(cuid())
+  name         String
+  kind         ReportKind      @default(report)
+  enabled      Boolean         @default(true)
+  frequency    ReportFrequency @default(weekly)
+  dayOfWeek    Int? // 0=Sun … 6=Sat, for weekly
+  dayOfMonth   Int? // 1–28, for monthly
+  hour         Int             @default(8) // 0–23, reporting timezone
+  minute       Int             @default(0)
+  rangePreset  String          @default("last7") // last7 | last30 | lastMonth | mtd (report kind)
+  propertyCode String? // null = all (report kind)
+  recipients   String // comma-separated email addresses
+  lastSentAt   DateTime?
+  createdAt    DateTime        @default(now())
+
+  @@map("report_schedules")
 }
 
 /// Audit of every sync run (what ran, how many rows, success/error).
