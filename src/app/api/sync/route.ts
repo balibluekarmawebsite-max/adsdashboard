@@ -100,8 +100,12 @@ export async function POST(request: Request) {
   state.finishedAt = null;
   state.results = [];
 
-  // Fire-and-forget: the pull keeps running on the process after we respond.
-  void runSync(platform, window)
+  // A real promise that runs to completion even if the client disconnects
+  // (proxy timeout on a long pull). We AWAIT it here so the work actually runs
+  // on the request — a fire-and-forget promise gets abandoned in production —
+  // and it also updates process state, so if this response never makes it back
+  // the client still gets the result by polling GET.
+  const work = runSync(platform, window)
     .catch((err) => {
       state.results = [
         { platform: "google", ok: false, accounts: 0, rows: 0, error: err instanceof Error ? err.message : String(err) },
@@ -112,7 +116,15 @@ export async function POST(request: Request) {
       state.finishedAt = new Date().toISOString();
     });
 
-  return NextResponse.json({ started: true, running: true }, { status: 202 });
+  await work;
+  return NextResponse.json(
+    {
+      done: true,
+      results: state.results,
+      totalRows: state.results.reduce((n, r) => n + r.rows, 0),
+    },
+    { status: 200 },
+  );
 }
 
 // GET /api/sync — poll the background sync's progress / last result.

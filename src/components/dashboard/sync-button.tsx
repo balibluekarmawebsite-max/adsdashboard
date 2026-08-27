@@ -48,9 +48,25 @@ export function SyncButton({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  // Start the pull (returns immediately), then poll for completion. The pull
-  // runs in the background on the server so it can't be cut off by the proxy's
-  // connection timeout, however long a month's data takes.
+  function report(results: SyncOutcome[], totalRows: number) {
+    const failed = results.filter((r) => !r.ok);
+    const names = results.map((r) => r.platform).join(" + ");
+    if (failed.length > 0) {
+      setMsg({
+        ok: false,
+        text: `Synced with issues — ${failed.map((f) => `${f.platform}: ${f.error ?? "failed"}`).join("; ")}`,
+      });
+    } else {
+      setMsg({
+        ok: true,
+        text: `Pulled ${totalRows.toLocaleString("en-US")} rows for ${period.label} from ${names || "the platforms"}. New campaigns show in the top block.`,
+      });
+    }
+  }
+
+  // Run the pull on the request (so it actually executes), and take the result
+  // straight from the response. If the connection drops on a long pull, the
+  // server keeps going and we fall back to polling GET for the outcome.
   async function sync(platform: PlatformArg) {
     setOpen(false);
     setBusy(platform);
@@ -59,16 +75,28 @@ export function SyncButton({
       const res = await fetch(`/api/sync?platform=${platform}&from=${period.from}&to=${period.to}`, {
         method: "POST",
       });
-      // 202 = we started it; 409 = one was already running (we attach and poll).
-      if (res.status !== 202 && res.status !== 409) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Couldn’t start the sync");
+      if (res.status === 409) {
+        await pollUntilDone();
+        return;
       }
-      await pollUntilDone();
-    } catch (err) {
-      setMsg({ ok: false, text: err instanceof Error ? err.message : "Sync failed" });
-      setBusy(null);
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Sync failed");
+      }
+      const body = (await res.json()) as SyncStatus;
+      report(body.results ?? [], body.totalRows ?? 0);
       await onSynced();
+      setBusy(null);
+    } catch (err) {
+      // A dropped connection (long pull behind the proxy) throws a TypeError —
+      // the pull is still running on the server, so poll for the result.
+      if (err instanceof TypeError) {
+        await pollUntilDone();
+      } else {
+        setMsg({ ok: false, text: err instanceof Error ? err.message : "Sync failed" });
+        setBusy(null);
+        await onSynced();
+      }
     }
   }
 
@@ -85,20 +113,7 @@ export function SyncButton({
         // transient network hiccup while polling — keep trying until the timeout
       }
       if (st && !st.running) {
-        const results = st.results ?? [];
-        const failed = results.filter((r) => !r.ok);
-        const names = results.map((r) => r.platform).join(" + ");
-        if (failed.length > 0) {
-          setMsg({
-            ok: false,
-            text: `Synced with issues — ${failed.map((f) => `${f.platform}: ${f.error ?? "failed"}`).join("; ")}`,
-          });
-        } else {
-          setMsg({
-            ok: true,
-            text: `Pulled ${(st.totalRows ?? 0).toLocaleString("en-US")} rows for ${period.label} from ${names || "the platforms"}. New campaigns show in the top block.`,
-          });
-        }
+        report(st.results ?? [], st.totalRows ?? 0);
         await onSynced();
         setBusy(null);
         return;
