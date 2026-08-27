@@ -1,6 +1,6 @@
 import pptxgen from "pptxgenjs";
 import type { ReportModel } from "./report";
-import { formatMoney, formatCompact, formatRatioPct, formatRoas } from "@/lib/format";
+import { formatMoney, formatNumber, formatRatioPct, formatRoas } from "@/lib/format";
 
 // A branded slide deck for the current report view. Pure JS (pptxgenjs) — no
 // native dependencies, so it runs fine on the production server.
@@ -67,8 +67,8 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
   pptx.title = "Ads Performance Report";
 
   const cur = model.scope.currency;
-  const money = (v: number | null | undefined, compact = true) =>
-    v == null ? "—" : formatMoney(v, cur, { compact });
+  // Full numbers (no M/K), matching the dashboard.
+  const money = (v: number | null | undefined) => (v == null ? "—" : formatMoney(v, cur));
 
   // --- Slide 1: title ---
   const title = pptx.addSlide();
@@ -116,13 +116,13 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
   headerBar(kpi, pptx, "Key metrics");
   const tiles: { label: string; value: string; delta: string }[] = [
     { label: "Spend", value: money(model.kpis.spend), delta: deltaText(model.kpis.changePct.spend) },
-    { label: "Impressions", value: formatCompact(model.kpis.impressions), delta: deltaText(model.kpis.changePct.impressions) },
-    { label: "Clicks", value: formatCompact(model.kpis.clicks), delta: deltaText(model.kpis.changePct.clicks) },
+    { label: "Impressions", value: formatNumber(model.kpis.impressions), delta: deltaText(model.kpis.changePct.impressions) },
+    { label: "Clicks", value: formatNumber(model.kpis.clicks), delta: deltaText(model.kpis.changePct.clicks) },
     { label: "CTR", value: formatRatioPct(model.kpis.ctr), delta: deltaText(model.kpis.changePct.ctr) },
-    { label: "Conversions", value: formatCompact(model.kpis.conversions), delta: deltaText(model.kpis.changePct.conversions) },
+    { label: "Conversions", value: formatNumber(model.kpis.conversions), delta: deltaText(model.kpis.changePct.conversions) },
     { label: "ROAS", value: formatRoas(model.kpis.roas), delta: deltaText(model.kpis.changePct.roas) },
     { label: "Revenue", value: money(model.kpis.revenue), delta: "" },
-    { label: "CPC", value: money(model.kpis.cpc, false), delta: deltaText(model.kpis.changePct.cpc) },
+    { label: "CPC", value: money(model.kpis.cpc), delta: deltaText(model.kpis.changePct.cpc) },
   ];
   const cols = 4;
   const tW = 2.93;
@@ -155,12 +155,13 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
     });
     kpi.addText(t.value, {
       x: x + 0.2,
-      y: y + 0.6,
+      y: y + 0.62,
       w: tW - 0.4,
       h: 0.9,
-      fontSize: 30,
+      fontSize: 21,
       bold: true,
       color: INK,
+      fit: "shrink",
     });
     if (t.delta) {
       kpi.addText(t.delta, {
@@ -223,8 +224,8 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
   }));
   const bodyRows = model.breakdown.rows.slice(0, 12).map((r) => {
     const cells = isCampaigns
-      ? [r.label, (r.platform ?? "").replace(/^\w/, (m) => m.toUpperCase()), money(r.spend), formatCompact(r.clicks), formatCompact(r.conversions), formatRoas(r.roas)]
-      : [r.label, money(r.spend), formatCompact(r.impressions), formatCompact(r.clicks), formatCompact(r.conversions), formatRoas(r.roas), money(r.revenue)];
+      ? [r.label, (r.platform ?? "").replace(/^\w/, (m) => m.toUpperCase()), money(r.spend), formatNumber(r.clicks), formatNumber(r.conversions), formatRoas(r.roas)]
+      : [r.label, money(r.spend), formatNumber(r.impressions), formatNumber(r.clicks), formatNumber(r.conversions), formatRoas(r.roas), money(r.revenue)];
     return cells.map((text) => ({
       text,
       options: { color: INK, fontSize: 10, align: "left" as const },

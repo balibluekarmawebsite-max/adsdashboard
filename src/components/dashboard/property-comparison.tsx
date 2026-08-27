@@ -34,7 +34,7 @@ export function PropertyComparison() {
                   <span className="text-muted-foreground ml-2 text-xs font-normal">{p.name}</span>
                 </span>
                 <span className="text-muted-foreground shrink-0 tabular-nums">
-                  {formatMoney(p.spend, currency, { compact: true })}
+                  {formatMoney(p.spend, currency)}
                 </span>
               </div>
               <div className="bg-muted h-2 w-full overflow-hidden rounded-full">

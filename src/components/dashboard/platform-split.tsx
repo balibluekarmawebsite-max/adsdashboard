@@ -2,7 +2,7 @@
 
 import { useByPlatform, useSummary } from "@/lib/metrics/client";
 import { ChartCard } from "./chart-card";
-import { formatCompact, formatMoney, formatRoas } from "@/lib/format";
+import { formatNumber, formatMoney, formatRoas } from "@/lib/format";
 
 const PLATFORM_META: Record<string, { label: string; color: string }> = {
   google: { label: "Google", color: "var(--platform-google)" },
@@ -50,7 +50,7 @@ export function PlatformSplit() {
                     {meta.label}
                   </span>
                   <span className="text-muted-foreground tabular-nums">
-                    {formatMoney(r.spend, currency, { compact: true })} · {share.toFixed(0)}%
+                    {formatMoney(r.spend, currency)} · {share.toFixed(0)}%
                   </span>
                 </div>
                 <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
@@ -60,7 +60,7 @@ export function PlatformSplit() {
                   />
                 </div>
                 <div className="text-muted-foreground flex gap-4 text-xs tabular-nums">
-                  <span>{formatCompact(r.conversions)} conv.</span>
+                  <span>{formatNumber(r.conversions)} conv.</span>
                   <span>ROAS {formatRoas(r.roas)}</span>
                 </div>
               </div>

@@ -39,7 +39,7 @@ export function KpiCard({
           </span>
         )}
       </div>
-      <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">
+      <p className="mt-2 text-xl font-semibold tracking-tight tabular-nums xl:text-2xl">
         {value == null ? "—" : format(animated)}
       </p>
       <div className={cn("mt-3 h-8", SENTIMENT_CLASS[sentiment])}>

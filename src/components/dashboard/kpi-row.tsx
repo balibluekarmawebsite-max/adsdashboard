@@ -5,7 +5,7 @@ import { useSummary, useTimeseries } from "@/lib/metrics/client";
 import { KpiCard } from "./kpi-card";
 import { KpiCardSkeleton } from "./skeletons";
 import { sentiment } from "@/lib/metrics/favorable";
-import { formatCompact, formatMoney, formatRatioPct, formatRoas } from "@/lib/format";
+import { formatNumber, formatMoney, formatRatioPct, formatRoas } from "@/lib/format";
 
 type MetricKey = "spend" | "impressions" | "clicks" | "ctr" | "cpc" | "conversions" | "roas";
 
@@ -43,7 +43,8 @@ export function KpiRow() {
   const series = ts?.series ?? [];
   const spark = (key: MetricKey) => series.map((s) => Number(s[key] ?? 0));
 
-  const money = (n: number) => formatMoney(n, currency, { compact: true });
+  // Full numbers with thousands separators (no M/K) so the exact figure reads
+  // straight off the tile.
   const moneyExact = (n: number) => formatMoney(n, currency);
 
   const kpis: {
@@ -54,12 +55,12 @@ export function KpiRow() {
     delta: number | null;
     spark: number[];
   }[] = [
-    { key: "spend", label: "Spend", value: c.spend, format: money, delta: chg.spend, spark: spark("spend") },
-    { key: "impressions", label: "Impressions", value: c.impressions, format: formatCompact, delta: chg.impressions, spark: spark("impressions") },
-    { key: "clicks", label: "Clicks", value: c.clicks, format: formatCompact, delta: chg.clicks, spark: spark("clicks") },
+    { key: "spend", label: "Spend", value: c.spend, format: moneyExact, delta: chg.spend, spark: spark("spend") },
+    { key: "impressions", label: "Impressions", value: c.impressions, format: formatNumber, delta: chg.impressions, spark: spark("impressions") },
+    { key: "clicks", label: "Clicks", value: c.clicks, format: formatNumber, delta: chg.clicks, spark: spark("clicks") },
     { key: "ctr", label: "CTR", value: c.ctr, format: (n) => formatRatioPct(n), delta: chg.ctr, spark: spark("ctr") },
     { key: "cpc", label: "CPC", value: c.cpc, format: moneyExact, delta: chg.cpc, spark: spark("cpc") },
-    { key: "conversions", label: "Conversions", value: c.conversions, format: formatCompact, delta: chg.conversions, spark: spark("conversions") },
+    { key: "conversions", label: "Conversions", value: c.conversions, format: formatNumber, delta: chg.conversions, spark: spark("conversions") },
   ];
 
   // Revenue is blended (all platforms) — summary.revenue is null when a single
@@ -76,14 +77,12 @@ export function KpiRow() {
   }
   kpis.push({ key: "roas", label: "ROAS", value: c.roas, format: (n) => formatRoas(n), delta: chg.roas, spark: spark("roas") });
 
-  const cols = summary.revenue ? "xl:grid-cols-8" : "xl:grid-cols-7";
-
   return (
     <motion.div
       variants={container}
       initial="hidden"
       animate="show"
-      className={`grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 ${cols}`}
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
     >
       {kpis.map((k) => (
         <motion.div key={k.key} variants={item}>

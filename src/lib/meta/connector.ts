@@ -147,6 +147,8 @@ async function fetchWithRetry(url: string, maxAttempts = 4): Promise<Response> {
 export async function fetchAllInsights(startUrl: string): Promise<MetaInsightRow[]> {
   const rows: MetaInsightRow[] = [];
   let next: string | null = startUrl;
+  let rateLimitAttempts = 0;
+  const MAX_RATE_LIMIT_ATTEMPTS = 3; // ~45s of backoff total, then give up cleanly
 
   while (next) {
     const res = await fetchWithRetry(next);
@@ -156,9 +158,22 @@ export async function fetchAllInsights(startUrl: string): Promise<MetaInsightRow
     if (json.error) {
       const { code, message } = json.error;
       const retryable = code !== undefined && RATE_LIMIT_CODES.has(code);
-      throw new Error(`Meta API error ${code}${retryable ? " (rate limit)" : ""}: ${message}`);
+      // On a rate limit, wait it out and retry the SAME page a few times before
+      // failing — transient throttles usually clear within a few seconds.
+      if (retryable && rateLimitAttempts < MAX_RATE_LIMIT_ATTEMPTS) {
+        rateLimitAttempts++;
+        await sleep((5 + 10 * rateLimitAttempts) * 1000); // 15s, 25s, 35s
+        continue;
+      }
+      if (retryable) {
+        throw new Error(
+          `Meta is rate-limiting requests (code ${code}). Wait a few minutes and Refresh again — Google is unaffected.`,
+        );
+      }
+      throw new Error(`Meta API error ${code}: ${message}`);
     }
 
+    rateLimitAttempts = 0; // page succeeded — reset for the next possible stall
     rows.push(...(json.data ?? []));
     next = json.paging?.next ?? null;
   }

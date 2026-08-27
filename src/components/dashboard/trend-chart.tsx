@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { useSummary, useTimeseries } from "@/lib/metrics/client";
 import { ChartCard } from "./chart-card";
-import { formatCompact, formatMoney } from "@/lib/format";
+import { formatCompact, formatMoney, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type MetricKey = "spend" | "impressions" | "clicks" | "conversions";
@@ -37,7 +37,7 @@ export function TrendChart() {
   const currency = summary?.currency ?? null;
 
   const fmtValue = (n: number) =>
-    metric === "spend" ? formatMoney(n, currency, { compact: true }) : formatCompact(n);
+    metric === "spend" ? formatMoney(n, currency) : formatNumber(n);
 
   const series = (data?.series ?? []).map((s) => ({ date: s.date, value: Number(s[metric] ?? 0) }));
 

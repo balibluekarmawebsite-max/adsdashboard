@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useByCampaign, useSummary } from "@/lib/metrics/client";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { ChartCard } from "./chart-card";
-import { formatCompact, formatMoney, formatRoas } from "@/lib/format";
+import { formatNumber, formatMoney, formatRoas } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type SortKey = "campaignName" | "impressions" | "clicks" | "spend" | "conversions" | "roas";
@@ -111,12 +111,12 @@ export function CampaignTable() {
                         <span className="truncate">{c.campaignName}</span>
                       </span>
                     </td>
-                    <td className="py-2 text-right tabular-nums">{formatCompact(c.impressions)}</td>
-                    <td className="py-2 text-right tabular-nums">{formatCompact(c.clicks)}</td>
+                    <td className="py-2 text-right tabular-nums">{formatNumber(c.impressions)}</td>
+                    <td className="py-2 text-right tabular-nums">{formatNumber(c.clicks)}</td>
                     <td className="py-2 text-right tabular-nums">
-                      {formatMoney(c.spend, currency, { compact: true })}
+                      {formatMoney(c.spend, currency)}
                     </td>
-                    <td className="py-2 text-right tabular-nums">{formatCompact(c.conversions)}</td>
+                    <td className="py-2 text-right tabular-nums">{formatNumber(c.conversions)}</td>
                     <td className="py-2 pl-3 text-right tabular-nums">{formatRoas(c.roas)}</td>
                   </tr>
                 ))

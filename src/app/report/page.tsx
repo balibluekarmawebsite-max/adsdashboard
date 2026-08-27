@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { parseMetricsParams } from "@/lib/metrics/query";
 import { buildReport, type ReportSeriesPoint } from "@/lib/export/report";
-import { formatMoney, formatCompact, formatRatioPct, formatRoas, formatDelta } from "@/lib/format";
+import { formatMoney, formatNumber, formatRatioPct, formatRoas, formatDelta } from "@/lib/format";
 import { PrintBar } from "./print-bar";
 
 export const dynamic = "force-dynamic";
@@ -40,18 +40,17 @@ export default async function ReportPage({
   const filter = await parseMetricsParams(params);
   const model = await buildReport(filter);
   const cur = model.scope.currency;
-  const money = (v: number | null | undefined, compact = true) =>
-    v == null ? "—" : formatMoney(v, cur, { compact });
+  const money = (v: number | null | undefined) => (v == null ? "—" : formatMoney(v, cur));
 
   const kpis: { label: string; value: string; delta: number | null }[] = [
     { label: "Spend", value: money(model.kpis.spend), delta: model.kpis.changePct.spend ?? null },
-    { label: "Impressions", value: formatCompact(model.kpis.impressions), delta: model.kpis.changePct.impressions ?? null },
-    { label: "Clicks", value: formatCompact(model.kpis.clicks), delta: model.kpis.changePct.clicks ?? null },
+    { label: "Impressions", value: formatNumber(model.kpis.impressions), delta: model.kpis.changePct.impressions ?? null },
+    { label: "Clicks", value: formatNumber(model.kpis.clicks), delta: model.kpis.changePct.clicks ?? null },
     { label: "CTR", value: formatRatioPct(model.kpis.ctr), delta: model.kpis.changePct.ctr ?? null },
-    { label: "Conversions", value: formatCompact(model.kpis.conversions), delta: model.kpis.changePct.conversions ?? null },
+    { label: "Conversions", value: formatNumber(model.kpis.conversions), delta: model.kpis.changePct.conversions ?? null },
     { label: "ROAS", value: formatRoas(model.kpis.roas), delta: model.kpis.changePct.roas ?? null },
     { label: "Revenue", value: money(model.kpis.revenue), delta: null },
-    { label: "CPC", value: money(model.kpis.cpc, false), delta: model.kpis.changePct.cpc ?? null },
+    { label: "CPC", value: money(model.kpis.cpc), delta: model.kpis.changePct.cpc ?? null },
   ];
   const isCampaigns = model.breakdown.kind === "campaigns";
 
@@ -178,9 +177,9 @@ export default async function ReportPage({
                       </td>
                     ) : null}
                     <td className="px-3 py-2 text-right tabular-nums">{money(r.spend)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{formatCompact(r.impressions)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{formatCompact(r.clicks)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{formatCompact(r.conversions)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{formatNumber(r.impressions)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{formatNumber(r.clicks)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{formatNumber(r.conversions)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{formatRoas(r.roas)}</td>
                     {isCampaigns ? null : (
                       <td className="px-3 py-2 text-right tabular-nums">{money(r.revenue)}</td>
