@@ -60,7 +60,6 @@ export function KpiRow() {
     { key: "clicks", label: "Clicks", value: c.clicks, format: formatNumber, delta: chg.clicks, spark: spark("clicks") },
     { key: "ctr", label: "CTR", value: c.ctr, format: (n) => formatRatioPct(n), delta: chg.ctr, spark: spark("ctr") },
     { key: "cpc", label: "CPC", value: c.cpc, format: moneyExact, delta: chg.cpc, spark: spark("cpc") },
-    { key: "conversions", label: "Conversions", value: c.conversions, format: formatNumber, delta: chg.conversions, spark: spark("conversions") },
   ];
 
   // Revenue is blended (all platforms) — summary.revenue is null when a single
@@ -77,25 +76,41 @@ export function KpiRow() {
   }
   kpis.push({ key: "roas", label: "ROAS", value: c.roas, format: (n) => formatRoas(n), delta: chg.roas, spark: spark("roas") });
 
+  const fmtDate = (s: string) =>
+    new Date(`${s}T00:00:00`).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  const prevLabel = `${fmtDate(summary.previousRange.from)} – ${fmtDate(summary.previousRange.to)}`;
+  const deltaTitle = `vs. the previous period (${prevLabel})`;
+
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-    >
-      {kpis.map((k) => (
-        <motion.div key={k.key} variants={item}>
-          <KpiCard
-            label={k.label}
-            value={k.value}
-            format={k.format}
-            delta={k.delta}
-            sentiment={sentiment(k.key, k.delta)}
-            spark={k.spark}
-          />
-        </motion.div>
-      ))}
-    </motion.div>
+    <div className="space-y-2.5">
+      <p className="text-muted-foreground text-xs">
+        <span className="font-medium">% change</span> vs. the previous period ·{" "}
+        <span className="tabular-nums">{prevLabel}</span>
+      </p>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+      >
+        {kpis.map((k) => (
+          <motion.div key={k.key} variants={item}>
+            <KpiCard
+              label={k.label}
+              value={k.value}
+              format={k.format}
+              delta={k.delta}
+              deltaTitle={deltaTitle}
+              sentiment={sentiment(k.key, k.delta)}
+              spark={k.spark}
+            />
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
   );
 }

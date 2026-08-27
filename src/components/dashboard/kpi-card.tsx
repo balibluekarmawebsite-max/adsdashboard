@@ -17,6 +17,7 @@ export function KpiCard({
   value,
   format,
   delta,
+  deltaTitle,
   sentiment,
   spark,
 }: {
@@ -24,6 +25,7 @@ export function KpiCard({
   value: number | null;
   format: (n: number) => string;
   delta: number | null;
+  deltaTitle?: string;
   sentiment: Sentiment;
   spark: number[];
 }) {
@@ -34,7 +36,14 @@ export function KpiCard({
       <div className="flex items-start justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium">{label}</p>
         {delta != null && (
-          <span className={cn("text-xs font-medium tabular-nums", SENTIMENT_CLASS[sentiment])}>
+          <span
+            title={deltaTitle}
+            className={cn(
+              "text-xs font-medium tabular-nums",
+              deltaTitle && "cursor-help",
+              SENTIMENT_CLASS[sentiment],
+            )}
+          >
             {formatDelta(delta)}
           </span>
         )}
