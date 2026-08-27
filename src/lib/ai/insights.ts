@@ -26,8 +26,13 @@ export interface InsightResult {
   snapshot: InsightSnapshot; // the key figures, always returned for sanity-checking
 }
 
+// Bump when the prompt/output format changes so stale cached summaries are
+// invalidated and regenerated in the new style on next view.
+const PROMPT_VERSION = "owner-report-v1";
+
 function hashFilters(filter: MetricsFilter, language: string, dataSignature: string): string {
   const key = [
+    PROMPT_VERSION,
     filter.fromStr,
     filter.toStr,
     filter.propertyId ?? "all",

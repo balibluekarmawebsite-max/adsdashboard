@@ -92,6 +92,7 @@ export async function generateSummary(
       { role: "system", content: systemPrompt(language) },
       { role: "user", content: userPrompt(snapshot) },
     ],
-    { temperature: 0.2 },
+    // Low temperature keeps the owner-report structure and tone consistent run-to-run.
+    { temperature: 0.15 },
   );
 }
