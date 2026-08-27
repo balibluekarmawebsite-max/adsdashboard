@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { prisma } from "@/lib/db";
+import { matchOutlet } from "@/lib/campaigns/outlets";
 
 // Read-only health check: what metrics data actually landed in the database,
 // what date range it covers, which property it's attached to, and the real
@@ -87,6 +88,51 @@ async function main() {
   if (routes.length === 0) console.log("  (none)");
   for (const r of routes) {
     console.log(`  ${r.adAccount.platform.padEnd(6)} ${r.adAccount.externalAccountId}  ${r.isRegex ? `/${r.pattern}/i` : `"${r.pattern}"`} → ${r.property.code}`);
+  }
+
+  // --- Outlet diagnostics (Phase 12) --------------------------------------
+  // How much spend actually reached each outlet, and how many of its campaigns
+  // are switched on for the report. Spend here counts ALL statuses; the
+  // dashboard only shows campaigns that are "included".
+  const outlets = await prisma.property.findMany({
+    where: { parentId: { not: null } },
+    select: { id: true, code: true, name: true, parent: { select: { code: true } } },
+    orderBy: { code: "asc" },
+  });
+  if (outlets.length > 0) {
+    console.log("\nOutlets — spend attributed + campaigns on report:");
+    for (const o of outlets) {
+      const agg = await prisma.metricsDaily.aggregate({
+        where: { propertyId: o.id },
+        _sum: { spend: true },
+        _count: { _all: true },
+      });
+      const [camps, incl] = await Promise.all([
+        prisma.campaign.count({ where: { propertyId: o.id } }),
+        prisma.campaign.count({ where: { propertyId: o.id, status: "included" } }),
+      ]);
+      console.log(
+        `  ${o.code.padEnd(9)} ${o.name.padEnd(18)} rows ${String(agg._count._all).padStart(4)}  spend ${fmt(agg._sum.spend).padStart(11)}  campaigns ${camps} (${incl} on report)`,
+      );
+    }
+  }
+
+  // Full registry: platform, the unit each campaign sits on, its report status,
+  // and — crucially — which outlet (if any) its NAME matches. A row whose name
+  // matches an outlet it's NOT assigned to is flagged "→ CODE?" (auto-match will
+  // fix it on the next sync unless it's locked to something else).
+  const registry = await prisma.campaign.findMany({
+    include: { property: { select: { code: true } } },
+    orderBy: [{ platform: "asc" }, { name: "asc" }],
+  });
+  console.log(`\nCampaign registry (${registry.length}):`);
+  console.log("  platform  unit        status     name-match       campaign");
+  for (const c of registry) {
+    const m = matchOutlet(c.name);
+    const match = !m ? "—" : c.property?.code === m.code ? m.code : `→ ${m.code}?`;
+    console.log(
+      `  ${c.platform.padEnd(8)}  ${(c.property?.code ?? "—").padEnd(10)}  ${c.status.padEnd(9)}  ${match.padEnd(14)}  ${c.name}`,
+    );
   }
   console.log("");
 }
