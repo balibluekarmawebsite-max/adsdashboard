@@ -1,3 +1,4 @@
+import { NewCampaignsNotice } from "@/components/dashboard/new-campaigns-notice";
 import { AiSummaryCard } from "@/components/dashboard/ai-summary-card";
 import { KpiRow } from "@/components/dashboard/kpi-row";
 import { TrendChart } from "@/components/dashboard/trend-chart";
@@ -8,6 +9,7 @@ import { CampaignTable } from "@/components/dashboard/campaign-table";
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
+      <NewCampaignsNotice />
       <AiSummaryCard />
       <KpiRow />
       <TrendChart />

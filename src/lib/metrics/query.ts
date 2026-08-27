@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/api/errors";
 import type { PlatformName } from "@/lib/sync/types";
 import { revenueForRange } from "@/lib/revenue/roas";
+import { includedCampaignFilter } from "@/lib/campaigns/query";
 import { summarize, pctChange, type Totals, type Summary } from "./derive";
 
 // Prisma sums come back as number | Decimal | null — coerce to a plain number.
@@ -45,6 +46,8 @@ export interface MetricsFilter {
   days: number;
   propertyId?: string;
   platform?: PlatformName;
+  /** External ids of campaigns shown on the report; undefined = no filter. */
+  includedCampaignIds?: string[];
 }
 
 function parseDate(value: string | null, field: string): { date: Date; str: string } {
@@ -82,6 +85,8 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
   }
 
   const days = Math.round((to.date.getTime() - from.date.getTime()) / 86_400_000) + 1;
+  // Restrict the report to campaigns marked "included" (null = registry empty).
+  const includedCampaignIds = (await includedCampaignFilter()) ?? undefined;
   return {
     from: from.date,
     to: to.date,
@@ -90,6 +95,7 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
     days,
     propertyId,
     platform,
+    includedCampaignIds,
   };
 }
 
@@ -97,6 +103,7 @@ type Where = {
   date: { gte: Date; lte: Date };
   propertyId?: string;
   platform?: PlatformName;
+  campaignId?: { in: string[] };
 };
 
 function whereFor(filter: MetricsFilter, from = filter.from, to = filter.to): Where {
@@ -104,6 +111,7 @@ function whereFor(filter: MetricsFilter, from = filter.from, to = filter.to): Wh
     date: { gte: from, lte: to },
     ...(filter.propertyId ? { propertyId: filter.propertyId } : {}),
     ...(filter.platform ? { platform: filter.platform } : {}),
+    ...(filter.includedCampaignIds ? { campaignId: { in: filter.includedCampaignIds } } : {}),
   };
 }
 

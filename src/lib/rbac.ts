@@ -36,6 +36,11 @@ export function canManageRevenue(actor: Role): boolean {
   return actor === "OWNER" || actor === "ADMIN";
 }
 
+/** Who may review campaigns and choose which appear on the report. */
+export function canManageCampaigns(actor: Role): boolean {
+  return actor === "OWNER" || actor === "ADMIN";
+}
+
 /** Roles this actor may assign when creating or editing a user. */
 export function assignableRoles(actor: Role): Role[] {
   if (actor === "OWNER") return ["OWNER", "ADMIN", "MEMBER"];

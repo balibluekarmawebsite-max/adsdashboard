@@ -3,10 +3,17 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wallet } from "lucide-react";
+import useSWR from "swr";
+import { LayoutDashboard, Users, Wallet, Megaphone } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
-import { asRole, canManageUsers, canManageRevenue } from "@/lib/rbac";
+import { asRole, canManageUsers, canManageRevenue, canManageCampaigns } from "@/lib/rbac";
+
+async function pendingFetcher(url: string): Promise<{ count: number }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("failed");
+  return res.json() as Promise<{ count: number }>;
+}
 import { useFilters } from "@/components/providers/filters-provider";
 import type { PropertyOption } from "./shell";
 
@@ -22,6 +29,13 @@ export function Sidebar({
   const isOverview = pathname === "/dashboard";
   const showTeam = canManageUsers(asRole(user.role));
   const showRevenue = canManageRevenue(asRole(user.role));
+  const showCampaigns = canManageCampaigns(asRole(user.role));
+  const { data: pending } = useSWR(
+    showCampaigns ? "/api/campaigns/pending" : null,
+    pendingFetcher,
+    { revalidateOnFocus: false },
+  );
+  const pendingCount = pending?.count ?? 0;
 
   return (
     <aside className="bg-sidebar border-sidebar-border hidden w-60 shrink-0 flex-col border-r lg:flex">
@@ -41,6 +55,20 @@ export function Sidebar({
           >
             Overview
           </NavLink>
+          {showCampaigns && (
+            <NavLink
+              href="/dashboard/campaigns"
+              active={pathname.startsWith("/dashboard/campaigns")}
+              icon={<Megaphone className="size-4" />}
+            >
+              <span className="flex-1">Campaigns</span>
+              {pendingCount > 0 && (
+                <span className="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                  {pendingCount}
+                </span>
+              )}
+            </NavLink>
+          )}
           {showRevenue && (
             <NavLink
               href="/dashboard/revenue"
