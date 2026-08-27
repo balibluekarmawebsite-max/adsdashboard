@@ -15,12 +15,15 @@ export function toReportingDateString(date: Date, timeZone = REPORTING_TIMEZONE)
 /**
  * A rolling window ending "today" (in the reporting timezone), inclusive.
  * Re-pulling recent days lets late-attributed conversions get corrected via upsert.
+ * A non-positive / non-finite `days` (e.g. a bad env value) falls back to 21 so
+ * we never build an invalid date.
  */
 export function rollingWindow(days: number, now = new Date()): { start: string; end: string } {
+  const span = Number.isFinite(days) && days >= 1 ? Math.floor(days) : 21;
   const endStr = toReportingDateString(now);
   const end = new Date(`${endStr}T00:00:00.000Z`);
   const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - (days - 1));
+  start.setUTCDate(start.getUTCDate() - (span - 1));
   return { start: start.toISOString().slice(0, 10), end: endStr };
 }
 
@@ -40,14 +43,25 @@ export interface SyncWindow {
   days?: number;
 }
 
+const WINDOW_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export function resolveWindow(
   opt: SyncWindow | undefined,
   defaultDays: number,
 ): { start: string; end: string } {
-  if (opt?.start && opt?.end) {
-    return opt.start <= opt.end
-      ? { start: opt.start, end: opt.end }
-      : { start: opt.end, end: opt.start };
+  // An explicit window (either bound given) must be a complete, valid pair —
+  // fail loudly instead of building an invalid date ("Invalid time value").
+  if (opt?.start || opt?.end) {
+    const { start, end } = opt;
+    if (!start || !end || !WINDOW_DATE_RE.test(start) || !WINDOW_DATE_RE.test(end)) {
+      throw new Error(
+        `Sync window needs both from and to as YYYY-MM-DD (got from="${start ?? ""}", to="${end ?? ""}").`,
+      );
+    }
+    if (Number.isNaN(Date.parse(`${start}T00:00:00Z`)) || Number.isNaN(Date.parse(`${end}T00:00:00Z`))) {
+      throw new Error(`Invalid sync window date (from="${start}", to="${end}").`);
+    }
+    return start <= end ? { start, end } : { start: end, end: start };
   }
   return rollingWindow(opt?.days ?? defaultDays);
 }
