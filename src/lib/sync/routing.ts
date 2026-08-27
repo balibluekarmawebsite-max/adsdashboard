@@ -44,20 +44,20 @@ export function resolvePropertyId(campaignName: string, routes: RouteRule[]): st
 }
 
 /**
- * Route normalized rows to properties. With NO routes (a dedicated account),
- * rows pass through unchanged (they already carry the account's property). With
- * routes, each row is re-assigned to its matching property and campaigns that
- * match nothing are DROPPED.
+ * Route normalized rows to properties by campaign name. A matching route moves
+ * the row to that property; a row that matches nothing KEEPS the ad account's
+ * own property. Nothing is ever dropped — every active/spending campaign reaches
+ * the dashboard, where it lands off-report (pending) until it's curated on the
+ * Campaigns page. This is what lets outlet campaigns (which don't carry a hotel
+ * prefix) show up so they can be assigned to their restaurant/spa.
  */
 export function applyRoutes<T extends { campaignName: string; propertyId: string }>(
   rows: T[],
   routes: RouteRule[],
 ): T[] {
   if (routes.length === 0) return rows;
-  const out: T[] = [];
-  for (const row of rows) {
+  return rows.map((row) => {
     const propertyId = resolvePropertyId(row.campaignName, routes);
-    if (propertyId) out.push({ ...row, propertyId });
-  }
-  return out;
+    return propertyId ? { ...row, propertyId } : row;
+  });
 }
