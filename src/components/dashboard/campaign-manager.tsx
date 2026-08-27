@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { motion } from "motion/react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, TriangleAlert, ListPlus } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import type { CampaignRow } from "@/lib/campaigns/query";
 import type { PropertyOption } from "@/lib/properties";
@@ -24,6 +24,39 @@ async function fetcher(url: string): Promise<CampaignsResponse> {
 
 const selectCls =
   "border-border bg-background focus-visible:ring-ring rounded-md border px-2 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none";
+
+// --- Spend windows: "Last 30 days" plus the last 12 calendar months ---------
+interface Period {
+  key: string;
+  label: string;
+  from: string;
+  to: string;
+}
+const ymd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function buildPeriods(): Period[] {
+  const today = new Date();
+  const from30 = new Date(today);
+  from30.setDate(from30.getDate() - 29);
+  const periods: Period[] = [
+    { key: "30d", label: "Last 30 days", from: ymd(from30), to: ymd(today) },
+  ];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    const mm = String(m + 1).padStart(2, "0");
+    periods.push({
+      key: `${y}-${mm}`,
+      label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      from: `${y}-${mm}-01`,
+      to: `${y}-${mm}-${String(last).padStart(2, "0")}`,
+    });
+  }
+  return periods;
+}
 
 function ReportSwitch({
   on,
@@ -58,12 +91,23 @@ function ReportSwitch({
 }
 
 export function CampaignManager({ properties }: { properties: PropertyOption[] }) {
-  const { data, mutate, isLoading } = useSWR("/api/campaigns", fetcher, {
-    revalidateOnFocus: false,
-  });
+  const periods = useMemo(() => buildPeriods(), []);
+  const [periodKey, setPeriodKey] = useState("30d");
+  const period = periods.find((p) => p.key === periodKey) ?? periods[0];
+  const [onlyWithSpend, setOnlyWithSpend] = useState(false);
+
+  const { data, mutate, isLoading } = useSWR(
+    `/api/campaigns?from=${period.from}&to=${period.to}`,
+    fetcher,
+    { revalidateOnFocus: false, keepPreviousData: true },
+  );
   const campaigns = data?.campaigns ?? [];
   const pendingCount = data?.pendingCount ?? 0;
+  const rows = onlyWithSpend ? campaigns.filter((c) => c.spend > 0) : campaigns;
+
   const [busy, setBusy] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function patch(id: string, body: Record<string, string>) {
     setBusy(id);
@@ -82,6 +126,43 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
   const toggle = (c: CampaignRow, on: boolean) =>
     patch(c.id, { status: on ? "included" : "excluded" });
   const reassign = (c: CampaignRow, propertyCode: string) => patch(c.id, { propertyCode });
+
+  async function addAllWithSpend() {
+    if (
+      !confirm(
+        `Turn on every campaign that spent in ${period.label}? They'll be added to the report — nothing already on it is turned off.`,
+      )
+    )
+      return;
+    setBulkBusy(true);
+    setBulkMsg(null);
+    try {
+      const res = await fetch("/api/campaigns", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "include-with-spend", from: period.from, to: period.to }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        updated?: number;
+        matched?: number;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(body.error ?? "Failed");
+      const updated = body.updated ?? 0;
+      const matched = body.matched ?? 0;
+      setBulkMsg({
+        ok: true,
+        text: updated
+          ? `Added ${updated} campaign${updated === 1 ? "" : "s"} to the report (${matched} spent in ${period.label}).`
+          : `All ${matched} campaign${matched === 1 ? "" : "s"} that spent in ${period.label} are already on the report.`,
+      });
+      await mutate();
+    } catch (err) {
+      setBulkMsg({ ok: false, text: err instanceof Error ? err.message : "Failed" });
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -111,6 +192,66 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
         </motion.div>
       )}
 
+      {/* Spend period + bulk curation */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Spend in</span>
+            <select
+              value={periodKey}
+              onChange={(e) => setPeriodKey(e.target.value)}
+              className={selectCls}
+            >
+              {periods.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-muted-foreground flex items-center gap-1.5 text-sm select-none">
+            <input
+              type="checkbox"
+              checked={onlyWithSpend}
+              onChange={(e) => setOnlyWithSpend(e.target.checked)}
+              className="accent-primary h-3.5 w-3.5"
+            />
+            Only campaigns with spend
+          </label>
+        </div>
+        <button
+          type="button"
+          onClick={addAllWithSpend}
+          disabled={bulkBusy}
+          className="border-border hover:bg-muted inline-flex h-9 items-center gap-2 rounded-md border px-3.5 text-sm font-medium transition-colors disabled:opacity-60"
+          title={`Add every campaign that spent in ${period.label} to the report`}
+        >
+          {bulkBusy ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ListPlus className="h-4 w-4" />
+          )}
+          Add all that spent
+        </button>
+      </div>
+      {bulkMsg && (
+        <div
+          className={cn(
+            "flex items-start gap-1.5 text-xs",
+            bulkMsg.ok
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-amber-600 dark:text-amber-400",
+          )}
+        >
+          {bulkMsg.ok ? (
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          )}
+          <span>{bulkMsg.text}</span>
+        </div>
+      )}
+
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -124,7 +265,7 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
                 <th className="px-5 py-2.5 font-medium">Campaign</th>
                 <th className="px-5 py-2.5 font-medium">Unit</th>
                 <th className="px-5 py-2.5 font-medium">Platform</th>
-                <th className="px-5 py-2.5 text-right font-medium">Spend (30d)</th>
+                <th className="px-5 py-2.5 text-right font-medium">Spend · {period.label}</th>
                 <th className="px-5 py-2.5 text-center font-medium">On report</th>
               </tr>
             </thead>
@@ -135,14 +276,16 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
                     Loading…
                   </td>
                 </tr>
-              ) : campaigns.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-muted-foreground px-5 py-8 text-center">
-                    No campaigns discovered yet. They appear here after a sync.
+                    {onlyWithSpend
+                      ? `No campaigns with spend in ${period.label}.`
+                      : "No campaigns discovered yet. They appear here after a sync."}
                   </td>
                 </tr>
               ) : (
-                campaigns.map((c) => (
+                rows.map((c) => (
                   <tr key={c.id} className="border-border/60 border-b last:border-0">
                     <td className="max-w-[22rem] px-5 py-3">
                       <div className="truncate font-medium" title={c.name}>
@@ -166,8 +309,13 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
                       </select>
                     </td>
                     <td className="text-muted-foreground px-5 py-3 capitalize">{c.platform}</td>
-                    <td className="px-5 py-3 text-right tabular-nums">
-                      {formatMoney(c.spend30d, "IDR", { compact: true })}
+                    <td
+                      className={cn(
+                        "px-5 py-3 text-right tabular-nums",
+                        c.spend === 0 && "text-muted-foreground/50",
+                      )}
+                    >
+                      {formatMoney(c.spend, "IDR")}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-center">

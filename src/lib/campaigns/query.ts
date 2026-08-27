@@ -10,8 +10,14 @@ export interface CampaignRow {
   propertyCode: string | null;
   propertyName: string | null;
   status: ReportStatus;
-  spend30d: number; // recent spend, to aid include/exclude decisions
+  spend: number; // spend over the selected window, to aid include/exclude decisions
   lastSeenAt: string;
+}
+
+/** Spend window for the campaigns list; defaults to the last 30 days. */
+export interface SpendWindow {
+  from: Date;
+  to: Date;
 }
 
 /**
@@ -33,18 +39,30 @@ export async function pendingCampaignCount(): Promise<number> {
   return prisma.campaign.count({ where: { status: "pending" } });
 }
 
-/** All campaigns with their property, status, and recent (30-day) spend. */
-export async function listCampaigns(): Promise<CampaignRow[]> {
+/**
+ * All campaigns with their property, status, and spend over `window` (defaults
+ * to the last 30 days). Pass a month's range to see which campaigns actually
+ * spent that month, to decide what belongs on the report.
+ */
+export async function listCampaigns(window?: SpendWindow): Promise<CampaignRow[]> {
   const campaigns = await prisma.campaign.findMany({
     include: { property: { select: { code: true, name: true } } },
     orderBy: [{ status: "asc" }, { property: { code: "asc" } }, { name: "asc" }],
   });
 
-  const from = new Date();
-  from.setUTCDate(from.getUTCDate() - 29);
+  let from: Date;
+  let to: Date | undefined;
+  if (window) {
+    from = window.from;
+    to = window.to;
+  } else {
+    from = new Date();
+    from.setUTCDate(from.getUTCDate() - 29);
+  }
+
   const spendGroups = await prisma.metricsDaily.groupBy({
     by: ["campaignId"],
-    where: { date: { gte: from } },
+    where: { date: { gte: from, ...(to ? { lte: to } : {}) } },
     _sum: { spend: true },
   });
   const spendByCampaign = new Map(spendGroups.map((g) => [g.campaignId, Number(g._sum.spend ?? 0)]));
@@ -57,9 +75,36 @@ export async function listCampaigns(): Promise<CampaignRow[]> {
     propertyCode: c.property?.code ?? null,
     propertyName: c.property?.name ?? null,
     status: c.status as ReportStatus,
-    spend30d: spendByCampaign.get(c.externalId) ?? 0,
+    spend: spendByCampaign.get(c.externalId) ?? 0,
     lastSeenAt: c.lastSeenAt.toISOString(),
   }));
+}
+
+/**
+ * Turn ON (include on the report) every campaign that had spend in [from, to].
+ * Additive — campaigns already on the report stay on; nothing is turned off.
+ * Returns how many were newly switched on and how many spent in total.
+ */
+export async function includeCampaignsWithSpend(
+  from: Date,
+  to: Date,
+): Promise<{ updated: number; matched: number }> {
+  const groups = await prisma.metricsDaily.groupBy({
+    by: ["campaignId"],
+    where: { date: { gte: from, lte: to } },
+    _sum: { spend: true },
+  });
+  const spentIds = groups.filter((g) => Number(g._sum.spend ?? 0) > 0).map((g) => g.campaignId);
+  if (spentIds.length === 0) return { updated: 0, matched: 0 };
+
+  const [res, matched] = await Promise.all([
+    prisma.campaign.updateMany({
+      where: { externalId: { in: spentIds }, status: { not: "included" } },
+      data: { status: "included" },
+    }),
+    prisma.campaign.count({ where: { externalId: { in: spentIds } } }),
+  ]);
+  return { updated: res.count, matched };
 }
 
 export async function setCampaignStatus(id: string, status: ReportStatus): Promise<void> {
