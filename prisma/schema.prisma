@@ -41,6 +41,14 @@ enum SyncStatus {
   error
 }
 
+/// Whether a campaign is shown on the owner report. New campaigns start
+/// `pending` (excluded until reviewed); `included` shows on the report.
+enum CampaignReportStatus {
+  pending
+  included
+  excluded
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -57,6 +65,7 @@ model Property {
   metricsDaily   MetricsDaily[]
   campaignRoutes CampaignRoute[]
   revenue        RevenueMonthly[]
+  campaigns      Campaign[]
 
   @@map("properties")
 }
@@ -100,6 +109,7 @@ model AdAccount {
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   metricsDaily   MetricsDaily[]
   campaignRoutes CampaignRoute[]
+  campaigns      Campaign[]
 
   @@unique([platform, externalAccountId])
   @@index([propertyId])
@@ -201,6 +211,29 @@ model RevenueMonthly {
   @@unique([propertyId, year, month])
   @@index([propertyId])
   @@map("revenue_monthly")
+}
+
+/// Registry of every ad campaign we've seen, with whether it appears on the
+/// owner report. Populated from metrics on each sync; new campaigns arrive as
+/// `pending` so nothing reaches the report until it's reviewed and approved.
+model Campaign {
+  id          String               @id @default(cuid())
+  platform    Platform
+  adAccountId String
+  externalId  String // platform campaign id (matches metrics_daily.campaignId)
+  name        String
+  propertyId  String?
+  status      CampaignReportStatus @default(pending)
+  firstSeenAt DateTime             @default(now())
+  lastSeenAt  DateTime             @updatedAt
+
+  adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  property  Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@unique([platform, adAccountId, externalId])
+  @@index([status])
+  @@index([propertyId])
+  @@map("campaigns")
 }
 
 /// Audit of every sync run (what ran, how many rows, success/error).

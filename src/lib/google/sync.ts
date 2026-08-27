@@ -3,6 +3,7 @@ import { runAccountSync } from "@/lib/sync/metrics";
 import { rollingWindow } from "@/lib/sync/dates";
 import type { AccountSyncResult } from "@/lib/sync/types";
 import { loadRoutes, applyRoutes } from "@/lib/sync/routing";
+import { refreshCampaignRegistry } from "@/lib/campaigns/registry";
 import { fetchDailyMetrics } from "./connector";
 
 const DEFAULT_DAYS = Number(process.env.SYNC_ROLLING_DAYS ?? 21);
@@ -37,6 +38,13 @@ export async function syncAllGoogle(days: number = DEFAULT_DAYS): Promise<Google
       },
     });
     results.push({ externalAccountId: account.externalAccountId, ...res });
+  }
+
+  // Keep the campaign registry current (new campaigns land as "pending").
+  try {
+    await refreshCampaignRegistry();
+  } catch (err) {
+    console.error("campaign registry refresh failed:", err);
   }
 
   return { platform: "google", start, end, accounts: accounts.length, results };
