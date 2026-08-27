@@ -9,6 +9,7 @@ import type { CampaignRow } from "@/lib/campaigns/query";
 import type { PropertyOption } from "@/lib/properties";
 import { cn } from "@/lib/utils";
 import { PropertyOptions } from "./property-options";
+import { SyncButton } from "./sync-button";
 
 interface CampaignsResponse {
   campaigns: CampaignRow[];
@@ -84,13 +85,17 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Assign each campaign to the right unit and toggle whether it appears on the report. New
-          campaigns arrive <span className="text-amber-600 dark:text-amber-400">off the report</span>{" "}
-          until you switch them on.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Assign each campaign to the right unit and toggle whether it appears on the report. New
+            campaigns arrive{" "}
+            <span className="text-amber-600 dark:text-amber-400">off the report</span> until you
+            switch them on.
+          </p>
+        </div>
+        <SyncButton onSynced={() => mutate()} />
       </div>
 
       {pendingCount > 0 && (
