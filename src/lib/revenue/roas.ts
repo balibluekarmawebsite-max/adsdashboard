@@ -13,8 +13,11 @@ export async function revenueForRange(
   to: Date,
   propertyId?: string,
 ): Promise<number> {
+  // A specific property → just its revenue. Otherwise the blended/"all" total,
+  // which is scoped to top-level hotels so outlet revenue isn't folded into the
+  // hotel ROAS (outlets are always addressed by their own propertyId).
   const rows = await prisma.revenueMonthly.findMany({
-    where: propertyId ? { propertyId } : {},
+    where: propertyId ? { propertyId } : { property: { parentId: null } },
     select: { year: true, month: true, amount: true },
   });
 

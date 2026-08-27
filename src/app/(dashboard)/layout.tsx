@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { listPropertyOptions } from "@/lib/properties.server";
 import { DashboardShell } from "@/components/dashboard/shell";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
@@ -10,11 +10,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const properties = await prisma.property.findMany({
-    where: { active: true },
-    orderBy: { code: "asc" },
-    select: { code: true, name: true },
-  });
+  const properties = await listPropertyOptions();
 
   return (
     <DashboardShell

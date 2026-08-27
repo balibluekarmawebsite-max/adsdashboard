@@ -4,11 +4,11 @@ import { type ReactNode } from "react";
 import { FiltersProvider } from "@/components/providers/filters-provider";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./topbar";
+import type { PropertyOption } from "@/lib/properties";
 
-export interface PropertyOption {
-  code: string;
-  name: string;
-}
+// Re-exported so existing `import { PropertyOption } from "./shell"` sites keep
+// working; the canonical definition lives in `@/lib/properties`.
+export type { PropertyOption };
 
 export function DashboardShell({
   user,

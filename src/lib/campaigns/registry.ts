@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { matchOutlet } from "./outlets";
 
 // The campaign registry: which campaigns exist and whether they appear on the
 // owner report. Populated from the metrics we've already synced.
@@ -63,6 +64,12 @@ export async function refreshCampaignRegistry(): Promise<RegistryRefreshResult> 
     }
   }
 
+  // Auto-route outlet campaigns (Botanist → BKDU-RES, Bketo → BKDS-RES, …) by
+  // name, so restaurant/spa spend lands on the outlet's own report instead of
+  // the hotel. Only UNLOCKED campaigns are touched — a manual unit assignment
+  // always wins — and a match locks the campaign so it stays put.
+  await autoRouteOutlets();
+
   // Re-apply manual property assignments: routing may have re-attributed a
   // locked campaign's fresh rows, so point them back at the chosen property.
   const locked = await prisma.campaign.findMany({
@@ -87,4 +94,54 @@ export async function refreshCampaignRegistry(): Promise<RegistryRefreshResult> 
     prisma.campaign.count(),
   ]);
   return { scanned: groups.length, added, pending, total, grandfathered: grandfather };
+}
+
+/**
+ * Attribute restaurant/spa campaigns to their outlet by matching the campaign
+ * name (see `outlets.ts`). Outlets share the hotel's ad account, so without this
+ * their spend would sit under the hotel. Matching locks the campaign to the
+ * outlet and pulls its metrics across immediately; already-locked campaigns are
+ * left alone so manual fixes are never undone.
+ */
+async function autoRouteOutlets(): Promise<void> {
+  const outlets = await prisma.property.findMany({
+    where: { parentId: { not: null } },
+    select: { id: true, code: true },
+  });
+  if (outlets.length === 0) return;
+  const idByCode = new Map(outlets.map((o) => [o.code, o.id]));
+
+  const candidates = await prisma.campaign.findMany({
+    where: { locked: false },
+    select: {
+      id: true,
+      name: true,
+      platform: true,
+      adAccountId: true,
+      externalId: true,
+      propertyId: true,
+    },
+  });
+
+  for (const c of candidates) {
+    const outlet = matchOutlet(c.name);
+    if (!outlet) continue;
+    const outletId = idByCode.get(outlet.code);
+    if (!outletId) continue; // outlet row not seeded yet
+
+    await prisma.campaign.update({
+      where: { id: c.id },
+      data: { propertyId: outletId, locked: true },
+    });
+    if (c.propertyId !== outletId) {
+      await prisma.metricsDaily.updateMany({
+        where: {
+          platform: c.platform,
+          adAccountId: c.adAccountId,
+          campaignId: c.externalId,
+        },
+        data: { propertyId: outletId },
+      });
+    }
+  }
 }

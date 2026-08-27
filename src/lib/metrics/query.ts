@@ -45,9 +45,24 @@ export interface MetricsFilter {
   toStr: string;
   days: number;
   propertyId?: string;
+  /**
+   * When no single property is chosen, the blended/"all" view is scoped to these
+   * property ids — the top-level hotels only, so restaurant/spa outlets stay out
+   * of the hotel totals. Ignored when `propertyId` is set.
+   */
+  propertyIds?: string[];
   platform?: PlatformName;
   /** External ids of campaigns shown on the report; undefined = no filter. */
   includedCampaignIds?: string[];
+}
+
+/** Ids of top-level properties (hotels) — everything without a parent. */
+async function topLevelPropertyIds(): Promise<string[]> {
+  const rows = await prisma.property.findMany({
+    where: { parentId: null },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
 }
 
 function parseDate(value: string | null, field: string): { date: Date; str: string } {
@@ -87,6 +102,8 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
   const days = Math.round((to.date.getTime() - from.date.getTime()) / 86_400_000) + 1;
   // Restrict the report to campaigns marked "included" (null = registry empty).
   const includedCampaignIds = (await includedCampaignFilter()) ?? undefined;
+  // Blended/"all" view: hotels only, so outlets are never mixed into the totals.
+  const propertyIds = propertyId ? undefined : await topLevelPropertyIds();
   return {
     from: from.date,
     to: to.date,
@@ -94,6 +111,7 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
     toStr: to.str,
     days,
     propertyId,
+    propertyIds,
     platform,
     includedCampaignIds,
   };
@@ -101,15 +119,20 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
 
 type Where = {
   date: { gte: Date; lte: Date };
-  propertyId?: string;
+  propertyId?: string | { in: string[] };
   platform?: PlatformName;
   campaignId?: { in: string[] };
 };
 
 function whereFor(filter: MetricsFilter, from = filter.from, to = filter.to): Where {
+  const propertyId = filter.propertyId
+    ? filter.propertyId
+    : filter.propertyIds
+      ? { in: filter.propertyIds }
+      : undefined;
   return {
     date: { gte: from, lte: to },
-    ...(filter.propertyId ? { propertyId: filter.propertyId } : {}),
+    ...(propertyId ? { propertyId } : {}),
     ...(filter.platform ? { platform: filter.platform } : {}),
     ...(filter.includedCampaignIds ? { campaignId: { in: filter.includedCampaignIds } } : {}),
   };

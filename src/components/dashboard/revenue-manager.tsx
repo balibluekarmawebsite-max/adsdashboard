@@ -7,9 +7,9 @@ import { Trash2, Pencil, Loader2, Save } from "lucide-react";
 import { formatMoney, formatRoas } from "@/lib/format";
 import { MONTH_NAMES, monthLabel } from "@/lib/revenue/constants";
 import type { RevenueRow } from "@/lib/revenue/query";
+import type { PropertyOption } from "@/lib/properties";
 import { RevenueUpload } from "./revenue-upload";
-
-type PropertyOption = { code: string; name: string };
+import { PropertyOptions } from "./property-options";
 
 const fieldCls =
   "border-border bg-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none";
@@ -110,11 +110,7 @@ export function RevenueManager({ properties }: { properties: PropertyOption[] })
               onChange={(e) => setPropertyCode(e.target.value)}
               className={fieldCls}
             >
-              {properties.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.code} · {p.name}
-                </option>
-              ))}
+              <PropertyOptions properties={properties} />
             </select>
           </label>
 

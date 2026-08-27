@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import { Upload, Loader2, Sparkles, Trash2, Save, X } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import { MONTH_NAMES } from "@/lib/revenue/constants";
-
-type PropertyOption = { code: string; name: string };
+import type { PropertyOption } from "@/lib/properties";
+import { PropertyOptions } from "./property-options";
 
 interface DraftRow {
   propertyCode: string;
@@ -200,11 +200,7 @@ export function RevenueUpload({
                         onChange={(e) => update(i, { propertyCode: e.target.value })}
                         className={fieldCls}
                       >
-                        {properties.map((p) => (
-                          <option key={p.code} value={p.code}>
-                            {p.code}
-                          </option>
-                        ))}
+                        <PropertyOptions properties={properties} />
                       </select>
                     </td>
                     <td className="py-2 pr-3">

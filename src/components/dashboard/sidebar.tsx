@@ -15,7 +15,7 @@ async function pendingFetcher(url: string): Promise<{ count: number }> {
   return res.json() as Promise<{ count: number }>;
 }
 import { useFilters } from "@/components/providers/filters-provider";
-import type { PropertyOption } from "./shell";
+import { groupByHotel, kindLabel, type PropertyOption } from "@/lib/properties";
 
 export function Sidebar({
   properties,
@@ -95,17 +95,31 @@ export function Sidebar({
               Properties
             </p>
             <PropertyItem active={property === "all"} onClick={() => setProperty("all")}>
-              <span className="font-medium">All properties</span>
+              <span className="font-medium">All hotels</span>
             </PropertyItem>
-            {properties.map((p) => (
-              <PropertyItem
-                key={p.code}
-                active={property === p.code}
-                onClick={() => setProperty(p.code)}
-              >
-                <span className="font-medium">{p.code}</span>
-                <span className="text-muted-foreground truncate text-xs">{p.name}</span>
-              </PropertyItem>
+            {groupByHotel(properties).map(({ hotel, outlets }) => (
+              <div key={hotel.code} className="space-y-1">
+                <PropertyItem
+                  active={property === hotel.code}
+                  onClick={() => setProperty(hotel.code)}
+                >
+                  <span className="font-medium">{hotel.code}</span>
+                  <span className="text-muted-foreground truncate text-xs">{hotel.name}</span>
+                </PropertyItem>
+                {outlets.map((o) => (
+                  <PropertyItem
+                    key={o.code}
+                    active={property === o.code}
+                    onClick={() => setProperty(o.code)}
+                    indent
+                  >
+                    <span className="font-medium">{o.name}</span>
+                    <span className="text-muted-foreground truncate text-xs">
+                      {kindLabel(o.kind)}
+                    </span>
+                  </PropertyItem>
+                ))}
+              </div>
             ))}
           </div>
         )}
@@ -144,17 +158,21 @@ function NavLink({
 function PropertyItem({
   active,
   onClick,
+  indent,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  indent?: boolean;
   children: ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left text-sm transition-colors",
+        "flex w-full flex-col items-start gap-0.5 rounded-md py-2 text-left text-sm transition-colors",
+        // Outlets sit indented under their hotel, with a faint tree guide.
+        indent ? "border-sidebar-border/70 ml-3 border-l pr-3 pl-3" : "px-3",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50",

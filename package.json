@@ -23,6 +23,7 @@
     "promote:owner": "tsx scripts/promote-owner.ts",
     "link:account": "tsx scripts/link-ad-account.ts",
     "route:campaign": "tsx scripts/route-campaign.ts",
+    "outlets:seed": "tsx scripts/seed-outlets.ts",
     "meta:accounts": "tsx scripts/list-meta-accounts.ts",
     "meta:actions": "tsx scripts/list-meta-actions.ts",
     "data:inspect": "tsx scripts/inspect-data.ts",

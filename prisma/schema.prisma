@@ -29,6 +29,13 @@ enum Platform {
   meta
 }
 
+/// A property is either a hotel (top-level) or an outlet under a hotel.
+enum PropertyKind {
+  hotel
+  restaurant
+  spa
+}
+
 enum ConnectionStatus {
   active
   needs_reauth
@@ -53,13 +60,20 @@ enum CampaignReportStatus {
 // Models
 // ---------------------------------------------------------------------------
 
-/// Business units whose ad performance we track (BKDS, BKDU, BKV, ORACLE).
+/// Business units whose ad performance we track. Hotels are top-level
+/// (`parentId` null, `kind` = hotel); restaurant/spa outlets hang under a hotel
+/// via `parentId` and are reported separately, never blended into hotel totals.
 model Property {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   name      String
-  code      String   @unique
-  active    Boolean  @default(true) // hidden from the dashboard when false
-  createdAt DateTime @default(now())
+  code      String       @unique
+  kind      PropertyKind @default(hotel)
+  parentId  String? // set for outlets; null for top-level hotels
+  active    Boolean      @default(true) // hidden from the dashboard when false
+  createdAt DateTime     @default(now())
+
+  parent  Property?  @relation("PropertyOutlets", fields: [parentId], references: [id], onDelete: Cascade)
+  outlets Property[] @relation("PropertyOutlets")
 
   adAccounts     AdAccount[]
   metricsDaily   MetricsDaily[]
@@ -67,6 +81,7 @@ model Property {
   revenue        RevenueMonthly[]
   campaigns      Campaign[]
 
+  @@index([parentId])
   @@map("properties")
 }
 

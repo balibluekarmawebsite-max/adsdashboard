@@ -2,7 +2,8 @@
 
 import { useFilters } from "@/components/providers/filters-provider";
 import { cn } from "@/lib/utils";
-import type { PropertyOption } from "./shell";
+import type { PropertyOption } from "@/lib/properties";
+import { PropertyOptions } from "./property-options";
 
 export function PropertySelect({
   properties,
@@ -22,12 +23,8 @@ export function PropertySelect({
         className,
       )}
     >
-      <option value="all">All properties</option>
-      {properties.map((p) => (
-        <option key={p.code} value={p.code}>
-          {p.code}
-        </option>
-      ))}
+      <option value="all">All hotels</option>
+      <PropertyOptions properties={properties} />
     </select>
   );
 }

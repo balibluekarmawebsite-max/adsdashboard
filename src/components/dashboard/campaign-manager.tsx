@@ -6,9 +6,9 @@ import { motion } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import type { CampaignRow } from "@/lib/campaigns/query";
+import type { PropertyOption } from "@/lib/properties";
 import { cn } from "@/lib/utils";
-
-type PropertyOption = { code: string; name: string };
+import { PropertyOptions } from "./property-options";
 
 interface CampaignsResponse {
   campaigns: CampaignRow[];
@@ -157,11 +157,7 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
                         className={selectCls}
                       >
                         {c.propertyCode == null && <option value="">— unassigned —</option>}
-                        {properties.map((p) => (
-                          <option key={p.code} value={p.code}>
-                            {p.code}
-                          </option>
-                        ))}
+                        <PropertyOptions properties={properties} />
                       </select>
                     </td>
                     <td className="text-muted-foreground px-5 py-3 capitalize">{c.platform}</td>
