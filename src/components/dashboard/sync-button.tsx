@@ -60,14 +60,26 @@ export function SyncButton({ onSynced }: { onSynced: () => void | Promise<unknow
       } else {
         setMsg({
           ok: true,
-          text: `Pulled ${body.totalRows.toLocaleString("en-US")} rows from ${names}. New campaigns appear below as “off report”.`,
+          text: `Pulled ${body.totalRows.toLocaleString("en-US")} rows from ${names}. New campaigns show in the top block to review.`,
         });
       }
-      await onSynced();
     } catch (err) {
-      setMsg({ ok: false, text: err instanceof Error ? err.message : "Sync failed" });
+      // A full pull can outlast the proxy's connection timeout even though it
+      // keeps running on the server — say so instead of a raw network error.
+      const networkish = err instanceof TypeError;
+      setMsg({
+        ok: false,
+        text: networkish
+          ? "The sync is taking a while and the connection dropped — it’s likely still running. Give it a minute, then reload the list."
+          : err instanceof Error
+            ? err.message
+            : "Sync failed",
+      });
     } finally {
       setBusy(null);
+      // Refresh the list regardless — the sync may have completed server-side
+      // even if the response never made it back.
+      await onSynced();
     }
   }
 

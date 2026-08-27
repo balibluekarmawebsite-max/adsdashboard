@@ -90,20 +90,96 @@ function ReportSwitch({
   );
 }
 
+/** The campaigns table for one set of rows (reused by both blocks). */
+function CampaignsTable({
+  rows,
+  properties,
+  busy,
+  onToggle,
+  onReassign,
+  periodLabel,
+}: {
+  rows: CampaignRow[];
+  properties: PropertyOption[];
+  busy: string | null;
+  onToggle: (c: CampaignRow, on: boolean) => void;
+  onReassign: (c: CampaignRow, code: string) => void;
+  periodLabel: string;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-muted-foreground border-border border-b text-left text-xs">
+            <th className="px-5 py-2.5 font-medium">Campaign</th>
+            <th className="px-5 py-2.5 font-medium">Unit</th>
+            <th className="px-5 py-2.5 font-medium">Platform</th>
+            <th className="px-5 py-2.5 text-right font-medium">Spend · {periodLabel}</th>
+            <th className="px-5 py-2.5 text-center font-medium">On report</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((c) => (
+            <tr key={c.id} className="border-border/60 border-b last:border-0">
+              <td className="max-w-[22rem] px-5 py-3">
+                <div className="truncate font-medium" title={c.name}>
+                  {c.name}
+                </div>
+              </td>
+              <td className="px-5 py-3">
+                <select
+                  value={c.propertyCode ?? ""}
+                  disabled={busy === c.id}
+                  onChange={(e) => onReassign(c, e.target.value)}
+                  className={selectCls}
+                >
+                  {c.propertyCode == null && <option value="">— unassigned —</option>}
+                  <PropertyOptions properties={properties} />
+                </select>
+              </td>
+              <td className="text-muted-foreground px-5 py-3 capitalize">{c.platform}</td>
+              <td
+                className={cn(
+                  "px-5 py-3 text-right tabular-nums",
+                  c.spend === 0 && "text-muted-foreground/50",
+                )}
+              >
+                {formatMoney(c.spend, "IDR")}
+              </td>
+              <td className="px-5 py-3">
+                <div className="flex items-center justify-center">
+                  {busy === c.id ? (
+                    <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  ) : (
+                    <ReportSwitch on={c.status === "included"} onToggle={(next) => onToggle(c, next)} />
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function CampaignManager({ properties }: { properties: PropertyOption[] }) {
   const periods = useMemo(() => buildPeriods(), []);
   const [periodKey, setPeriodKey] = useState("30d");
   const period = periods.find((p) => p.key === periodKey) ?? periods[0];
   const [onlyWithSpend, setOnlyWithSpend] = useState(false);
 
-  const { data, mutate, isLoading } = useSWR(
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
     `/api/campaigns?from=${period.from}&to=${period.to}`,
     fetcher,
     { revalidateOnFocus: false, keepPreviousData: true },
   );
   const campaigns = data?.campaigns ?? [];
-  const pendingCount = data?.pendingCount ?? 0;
   const rows = onlyWithSpend ? campaigns.filter((c) => c.spend > 0) : campaigns;
+  // Split so newly-detected campaigns (pending) sit in their own block on top,
+  // and everything already reviewed stays in the main list below.
+  const pending = rows.filter((c) => c.status === "pending");
+  const reviewed = rows.filter((c) => c.status !== "pending");
 
   const [busy, setBusy] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -179,19 +255,6 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
         <SyncButton onSynced={() => mutate()} />
       </div>
 
-      {pendingCount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 rounded-xl border px-4 py-3 text-sm"
-        >
-          <strong>
-            {pendingCount} new campaign{pendingCount === 1 ? "" : "s"} to review.
-          </strong>{" "}
-          Check the unit is correct, then switch on the ones you want on the report.
-        </motion.div>
-      )}
-
       {/* Spend period + bulk curation */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -252,90 +315,96 @@ export function CampaignManager({ properties }: { properties: PropertyOption[] }
         </div>
       )}
 
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="border-border bg-card overflow-hidden rounded-xl border shadow-sm"
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-muted-foreground border-border border-b text-left text-xs">
-                <th className="px-5 py-2.5 font-medium">Campaign</th>
-                <th className="px-5 py-2.5 font-medium">Unit</th>
-                <th className="px-5 py-2.5 font-medium">Platform</th>
-                <th className="px-5 py-2.5 text-right font-medium">Spend · {period.label}</th>
-                <th className="px-5 py-2.5 text-center font-medium">On report</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="text-muted-foreground px-5 py-8 text-center">
-                    Loading…
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-muted-foreground px-5 py-8 text-center">
-                    {onlyWithSpend
-                      ? `No campaigns with spend in ${period.label}.`
-                      : "No campaigns discovered yet. They appear here after a sync."}
-                  </td>
-                </tr>
-              ) : (
-                rows.map((c) => (
-                  <tr key={c.id} className="border-border/60 border-b last:border-0">
-                    <td className="max-w-[22rem] px-5 py-3">
-                      <div className="truncate font-medium" title={c.name}>
-                        {c.name}
-                      </div>
-                      {c.status === "pending" && (
-                        <span className="text-amber-600 dark:text-amber-400 text-[11px] font-medium">
-                          New — review
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <select
-                        value={c.propertyCode ?? ""}
-                        disabled={busy === c.id}
-                        onChange={(e) => reassign(c, e.target.value)}
-                        className={selectCls}
-                      >
-                        {c.propertyCode == null && <option value="">— unassigned —</option>}
-                        <PropertyOptions properties={properties} />
-                      </select>
-                    </td>
-                    <td className="text-muted-foreground px-5 py-3 capitalize">{c.platform}</td>
-                    <td
-                      className={cn(
-                        "px-5 py-3 text-right tabular-nums",
-                        c.spend === 0 && "text-muted-foreground/50",
-                      )}
-                    >
-                      {formatMoney(c.spend, "IDR")}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center justify-center">
-                        {busy === c.id ? (
-                          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                        ) : (
-                          <ReportSwitch
-                            on={c.status === "included"}
-                            onToggle={(next) => toggle(c, next)}
-                          />
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {error && !data ? (
+        <div className="border-destructive/40 bg-destructive/5 text-destructive rounded-xl border p-5 text-sm shadow-sm">
+          <p className="font-medium">Couldn’t load campaigns.</p>
+          <p className="mt-1 opacity-90">
+            {error instanceof Error ? error.message : "Please try again."}
+          </p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="mt-3 rounded-md border border-current px-3 py-1.5 text-xs font-medium"
+          >
+            Retry
+          </button>
         </div>
-      </motion.section>
+      ) : isLoading && !data ? (
+        <div className="border-border bg-card text-muted-foreground rounded-xl border p-10 text-center text-sm shadow-sm">
+          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+          Loading campaigns…
+        </div>
+      ) : campaigns.length === 0 ? (
+        <div className="border-border bg-card text-muted-foreground rounded-xl border p-10 text-center text-sm shadow-sm">
+          No campaigns discovered yet. Click{" "}
+          <span className="text-foreground font-medium">Refresh campaigns</span> to pull them from
+          Meta &amp; Google.
+        </div>
+      ) : (
+        <>
+          {/* New campaigns from the latest sync — review, then they move below */}
+          {pending.length > 0 && (
+            <motion.section
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="overflow-hidden rounded-xl border border-amber-500/40 bg-amber-500/5 shadow-sm"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 px-5 py-3">
+                <p className="text-sm">
+                  <span className="font-semibold text-amber-700 dark:text-amber-300">
+                    {pending.length} new campaign{pending.length === 1 ? "" : "s"} to review
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · assign a unit, then switch on the ones for the report
+                  </span>
+                </p>
+                {isValidating && <Loader2 className="h-4 w-4 animate-spin text-amber-600" />}
+              </div>
+              <CampaignsTable
+                rows={pending}
+                properties={properties}
+                busy={busy}
+                onToggle={toggle}
+                onReassign={reassign}
+                periodLabel={period.label}
+              />
+            </motion.section>
+          )}
+
+          {/* The persistent list — everything already reviewed */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="border-border bg-card overflow-hidden rounded-xl border shadow-sm"
+          >
+            <div className="border-border flex items-center justify-between border-b px-5 py-3">
+              <h2 className="text-sm font-semibold">
+                {pending.length > 0 ? "On the report & hidden" : "Campaigns"}
+                <span className="text-muted-foreground ml-2 font-normal">{reviewed.length}</span>
+              </h2>
+              {isValidating && <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />}
+            </div>
+            {reviewed.length === 0 ? (
+              <p className="text-muted-foreground px-5 py-8 text-center text-sm">
+                {onlyWithSpend
+                  ? `No reviewed campaigns with spend in ${period.label}.`
+                  : "Review the new campaigns above — they’ll move here once you switch them on or off."}
+              </p>
+            ) : (
+              <CampaignsTable
+                rows={reviewed}
+                properties={properties}
+                busy={busy}
+                onToggle={toggle}
+                onReassign={reassign}
+                periodLabel={period.label}
+              />
+            )}
+          </motion.section>
+        </>
+      )}
     </div>
   );
 }
