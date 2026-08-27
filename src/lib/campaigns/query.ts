@@ -72,3 +72,28 @@ export async function setCampaignStatus(id: string, status: ReportStatus): Promi
     throw new ApiError(404, "Campaign not found");
   }
 }
+
+/**
+ * Manually assign a campaign to a property (unit). Locks it so the auto-router
+ * won't override it, and re-attributes the campaign's existing metrics to the
+ * chosen property immediately so the report reflects it at once.
+ */
+export async function setCampaignProperty(id: string, propertyCode: string): Promise<void> {
+  const property = await prisma.property.findUnique({ where: { code: propertyCode } });
+  if (!property) throw new ApiError(400, `Unknown property "${propertyCode}"`);
+  const campaign = await prisma.campaign.findUnique({ where: { id } });
+  if (!campaign) throw new ApiError(404, "Campaign not found");
+
+  await prisma.campaign.update({
+    where: { id },
+    data: { propertyId: property.id, locked: true },
+  });
+  await prisma.metricsDaily.updateMany({
+    where: {
+      platform: campaign.platform,
+      adAccountId: campaign.adAccountId,
+      campaignId: campaign.externalId,
+    },
+    data: { propertyId: property.id },
+  });
+}

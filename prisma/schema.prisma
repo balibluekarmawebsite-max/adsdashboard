@@ -224,6 +224,7 @@ model Campaign {
   name        String
   propertyId  String?
   status      CampaignReportStatus @default(pending)
+  locked      Boolean              @default(false) // manual property assignment; sync won't override it
   firstSeenAt DateTime             @default(now())
   lastSeenAt  DateTime             @updatedAt
 

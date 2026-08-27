@@ -36,14 +36,17 @@ export async function refreshCampaignRegistry(): Promise<RegistryRefreshResult> 
           externalId: g.campaignId,
         },
       },
-      select: { id: true },
+      select: { id: true, locked: true },
     });
 
     if (found) {
-      // Keep the name / property fresh; @updatedAt bumps lastSeenAt.
+      // Keep the name fresh; only re-derive the property when NOT manually
+      // locked (a manual assignment must survive the sync).
       await prisma.campaign.update({
         where: { id: found.id },
-        data: { name: g.campaignName, propertyId: g.propertyId },
+        data: found.locked
+          ? { name: g.campaignName }
+          : { name: g.campaignName, propertyId: g.propertyId },
       });
     } else {
       await prisma.campaign.create({
@@ -58,6 +61,25 @@ export async function refreshCampaignRegistry(): Promise<RegistryRefreshResult> 
       });
       added++;
     }
+  }
+
+  // Re-apply manual property assignments: routing may have re-attributed a
+  // locked campaign's fresh rows, so point them back at the chosen property.
+  const locked = await prisma.campaign.findMany({
+    where: { locked: true, propertyId: { not: null } },
+    select: { platform: true, adAccountId: true, externalId: true, propertyId: true },
+  });
+  for (const c of locked) {
+    if (!c.propertyId) continue;
+    await prisma.metricsDaily.updateMany({
+      where: {
+        platform: c.platform,
+        adAccountId: c.adAccountId,
+        campaignId: c.externalId,
+        propertyId: { not: c.propertyId },
+      },
+      data: { propertyId: c.propertyId },
+    });
   }
 
   const [pending, total] = await Promise.all([
