@@ -90,6 +90,7 @@ model Property {
   metricsDaily   MetricsDaily[]
   campaignRoutes CampaignRoute[]
   revenue        RevenueMonthly[]
+  revenuePeriods RevenuePeriod[]
   campaigns      Campaign[]
   userAccess     UserProperty[]
 
@@ -257,6 +258,30 @@ model RevenueMonthly {
   @@unique([propertyId, year, month])
   @@index([propertyId])
   @@map("revenue_monthly")
+}
+
+/// Revenue for an explicit date range (e.g. 21–27 Aug 2026), for when a report
+/// covers a specific period rather than a whole calendar month. For the days it
+/// covers this takes precedence over the monthly figure; the monthly figure
+/// fills any remaining days of a range. Dates are inclusive, stored as UTC dates
+/// to line up with metrics_daily.date.
+model RevenuePeriod {
+  id         String   @id @default(cuid())
+  propertyId String
+  startDate  DateTime @db.Date // inclusive
+  endDate    DateTime @db.Date // inclusive
+  amount     Decimal  @db.Decimal(18, 4) // money — Decimal, never Float
+  currency   String   @db.Char(3) // ISO 4217, e.g. "IDR"
+  source     String? // "manual" or "upload:<filename>"
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, startDate, endDate])
+  @@index([propertyId])
+  @@map("revenue_periods")
 }
 
 /// Registry of every ad campaign we've seen, with whether it appears on the

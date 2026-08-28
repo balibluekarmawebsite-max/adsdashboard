@@ -3,7 +3,16 @@ import { auth } from "@/lib/auth";
 import { requireSession } from "@/lib/api/guard";
 import { errorResponse, ApiError } from "@/lib/api/errors";
 import { asRole, canManageRevenue } from "@/lib/rbac";
-import { listRevenue, upsertRevenue, deleteRevenue, parseRevenueInput } from "@/lib/revenue/query";
+import {
+  listRevenue,
+  upsertRevenue,
+  deleteRevenue,
+  parseRevenueInput,
+  listRevenuePeriods,
+  upsertRevenuePeriod,
+  deleteRevenuePeriod,
+  parseRevenuePeriodInput,
+} from "@/lib/revenue/query";
 
 export const runtime = "nodejs";
 
@@ -15,34 +24,47 @@ async function requireRevenueManager() {
   return session;
 }
 
-// GET /api/revenue — full monthly revenue history (with ad spend + ROAS per row).
+// GET /api/revenue — monthly revenue history plus date-range (period) entries,
+// each with ad spend + ROAS.
 export async function GET() {
   try {
     await requireSession();
-    return NextResponse.json({ rows: await listRevenue() });
+    const [rows, periods] = await Promise.all([listRevenue(), listRevenuePeriods()]);
+    return NextResponse.json({ rows, periods });
   } catch (err) {
     return errorResponse(err);
   }
 }
 
-// POST /api/revenue — create or overwrite one property-month's revenue.
+// POST /api/revenue — create or overwrite revenue. A body with startDate/endDate
+// is a date-range entry; otherwise it's a calendar-month entry.
 export async function POST(request: Request) {
   try {
     await requireRevenueManager();
-    const input = parseRevenueInput(await request.json().catch(() => null));
-    const row = await upsertRevenue(input);
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+    if (body && (body.startDate != null || body.endDate != null || body.kind === "period")) {
+      const row = await upsertRevenuePeriod(parseRevenuePeriodInput(body));
+      return NextResponse.json({ id: row.id });
+    }
+    const row = await upsertRevenue(parseRevenueInput(body));
     return NextResponse.json({ id: row.id });
   } catch (err) {
     return errorResponse(err);
   }
 }
 
-// DELETE /api/revenue?id=... — remove one revenue row.
+// DELETE /api/revenue?id=... (month) or ?periodId=... (date range).
 export async function DELETE(request: Request) {
   try {
     await requireRevenueManager();
-    const id = new URL(request.url).searchParams.get("id");
-    if (!id) throw new ApiError(400, "id is required");
+    const params = new URL(request.url).searchParams;
+    const periodId = params.get("periodId");
+    if (periodId) {
+      await deleteRevenuePeriod(periodId);
+      return NextResponse.json({ ok: true });
+    }
+    const id = params.get("id");
+    if (!id) throw new ApiError(400, "id or periodId is required");
     await deleteRevenue(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
