@@ -11,6 +11,11 @@ const n = (v: number | null | undefined) => (v == null ? "" : Number(v));
 export function reportToXlsx(model: ReportModel): Buffer {
   const wb = XLSX.utils.book_new();
   const cur = model.scope.currency ?? "mixed";
+  const cp = model.kpis.changePct;
+  // The variance column only appears when the global "show variance" setting is on.
+  const v = model.showVariance;
+  const metricRow = (label: string, value: string | number, change: number | null | undefined) =>
+    v ? [label, value, n(change)] : [label, value];
 
   // --- Summary ---
   const summaryAoa: (string | number)[][] = [
@@ -22,18 +27,18 @@ export function reportToXlsx(model: ReportModel): Buffer {
     ["Currency", cur],
     ["Generated", new Date(model.scope.generatedAt).toLocaleString("en-US")],
     [],
-    ["Metric", `Value (${cur})`, "Change vs prev period (%)"],
-    ["Spend", n(model.kpis.spend), n(model.kpis.changePct.spend)],
-    ["Impressions", n(model.kpis.impressions), n(model.kpis.changePct.impressions)],
-    ["Clicks", n(model.kpis.clicks), n(model.kpis.changePct.clicks)],
-    ["CTR (%)", pct(model.kpis.ctr), n(model.kpis.changePct.ctr)],
-    ["CPC", n(model.kpis.cpc), n(model.kpis.changePct.cpc)],
-    ["Conversions", n(model.kpis.conversions), n(model.kpis.changePct.conversions)],
-    ["ROAS (×)", n(model.kpis.roas), n(model.kpis.changePct.roas)],
-    ["Revenue", n(model.kpis.revenue), ""],
+    v ? ["Metric", `Value (${cur})`, "Change vs prev period (%)"] : ["Metric", `Value (${cur})`],
+    metricRow("Spend", n(model.kpis.spend), cp.spend),
+    metricRow("Impressions", n(model.kpis.impressions), cp.impressions),
+    metricRow("Clicks", n(model.kpis.clicks), cp.clicks),
+    metricRow("CTR (%)", pct(model.kpis.ctr), cp.ctr),
+    metricRow("CPC", n(model.kpis.cpc), cp.cpc),
+    metricRow("Conversions", n(model.kpis.conversions), cp.conversions),
+    metricRow("ROAS (×)", n(model.kpis.roas), cp.roas),
+    metricRow("Revenue", n(model.kpis.revenue), cp.revenue),
   ];
   const ws1 = XLSX.utils.aoa_to_sheet(summaryAoa);
-  ws1["!cols"] = [{ wch: 22 }, { wch: 26 }, { wch: 24 }];
+  ws1["!cols"] = v ? [{ wch: 22 }, { wch: 26 }, { wch: 24 }] : [{ wch: 22 }, { wch: 26 }];
   XLSX.utils.book_append_sheet(wb, ws1, "Summary");
 
   // --- Breakdown (units or campaigns) ---

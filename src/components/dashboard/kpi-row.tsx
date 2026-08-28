@@ -87,10 +87,12 @@ export function KpiRow() {
 
   return (
     <div className="space-y-2.5">
-      <p className="text-muted-foreground text-xs">
-        <span className="font-medium">% change</span> vs. the previous period ·{" "}
-        <span className="tabular-nums">{prevLabel}</span>
-      </p>
+      {summary.showVariance && (
+        <p className="text-muted-foreground text-xs">
+          <span className="font-medium">% change</span> vs. the previous period ·{" "}
+          <span className="tabular-nums">{prevLabel}</span>
+        </p>
+      )}
       <motion.div
         variants={container}
         initial="hidden"

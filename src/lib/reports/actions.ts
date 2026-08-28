@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { asRole, canManageReports } from "@/lib/rbac";
 import { parseRecipients } from "@/lib/mail/send";
 import { runSchedule } from "@/lib/reports/scheduled";
+import { setShowVariance } from "@/lib/settings";
 import type { ReportKind, ReportFrequency } from "@/generated/prisma/client";
 
 export type ScheduleActionState = { error?: string; success?: string } | undefined;
@@ -86,6 +87,15 @@ export async function deleteSchedule(id: string): Promise<ScheduleActionState> {
   await prisma.reportSchedule.delete({ where: { id } });
   revalidatePath("/dashboard/reports");
   return { success: "Schedule removed." };
+}
+
+/** Global toggle: show or hide the period-over-period variance % everywhere. */
+export async function setReportVariance(on: boolean): Promise<ScheduleActionState> {
+  if (!(await requireManager())) return { error: "Not allowed." };
+  await setShowVariance(on);
+  revalidatePath("/dashboard/reports");
+  revalidatePath("/dashboard");
+  return { success: on ? "Variance is now shown on reports." : "Variance is now hidden on reports." };
 }
 
 /** Fire a schedule immediately (a test send / on-demand). */

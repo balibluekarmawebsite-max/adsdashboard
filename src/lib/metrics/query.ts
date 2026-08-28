@@ -4,6 +4,7 @@ import type { PlatformName } from "@/lib/sync/types";
 import { revenueForRange } from "@/lib/revenue/roas";
 import { includedCampaignFilter } from "@/lib/campaigns/query";
 import { allowedPropertyIds } from "@/lib/auth/scope";
+import { getShowVariance } from "@/lib/settings";
 import { summarize, pctChange, type Totals, type Summary } from "./derive";
 
 // Prisma sums come back as number | Decimal | null — coerce to a plain number.
@@ -261,18 +262,28 @@ export async function summary(filter: MetricsFilter) {
   if (blended && prevRevenue > 0)
     previous.roas = previous.spend > 0 ? prevRevenue / previous.spend : null;
 
+  // A global toggle can hide the period-over-period variance everywhere. When
+  // off, we null out every change so the dashboard, exports and emails simply
+  // render no delta (and the callers hide the "% change" caption).
+  const showVariance = await getShowVariance();
+
   const changePct = {} as Record<keyof Summary, number | null>;
   (Object.keys(current) as (keyof Summary)[]).forEach((k) => {
-    changePct[k] = pctChange(current[k], previous[k]);
+    changePct[k] = showVariance ? pctChange(current[k], previous[k]) : null;
   });
 
   return {
     range: rangeMeta(filter),
     previousRange: { from: iso(prevFrom), to: iso(prevTo) },
     filters: { property: filter.propertyId ?? "all", platform: filter.platform ?? "all" },
+    showVariance,
     ...currency,
     revenue: blended
-      ? { now: curRevenue, prev: prevRevenue, changePct: pctChange(curRevenue, prevRevenue) }
+      ? {
+          now: curRevenue,
+          prev: prevRevenue,
+          changePct: showVariance ? pctChange(curRevenue, prevRevenue) : null,
+        }
       : null,
     current,
     previous,

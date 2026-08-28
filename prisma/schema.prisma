@@ -260,6 +260,16 @@ model RevenueMonthly {
   @@map("revenue_monthly")
 }
 
+/// Small global key-value store for app-wide settings (e.g. whether reports
+/// show the period-over-period variance %). One row per setting key.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
 /// Revenue for an explicit date range (e.g. 21–27 Aug 2026), for when a report
 /// covers a specific period rather than a whole calendar month. For the days it
 /// covers this takes precedence over the monthly figure; the monthly figure

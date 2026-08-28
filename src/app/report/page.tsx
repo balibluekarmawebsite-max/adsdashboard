@@ -148,9 +148,11 @@ export default async function ReportPage({
               );
             })}
           </div>
-          <p className="mt-2 text-[11px]" style={{ color: MUTED }}>
-            ▲▼ % change vs. the previous period · {model.comparison.from} – {model.comparison.to}
-          </p>
+          {model.showVariance && (
+            <p className="mt-2 text-[11px]" style={{ color: MUTED }}>
+              ▲▼ % change vs. the previous period · {model.comparison.from} – {model.comparison.to}
+            </p>
+          )}
         </section>
 
         {/* Spend trend */}

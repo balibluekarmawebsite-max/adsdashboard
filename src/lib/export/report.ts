@@ -62,6 +62,8 @@ export interface ReportModel {
   };
   /** The immediately-preceding equal-length period the % changes compare against. */
   comparison: { from: string; to: string };
+  /** When false, a global setting hides all period-over-period variance. */
+  showVariance: boolean;
   kpis: ReportKpis;
   series: ReportSeriesPoint[];
   platformSplit: ReportPlatformSplit[];
@@ -179,6 +181,7 @@ export async function buildReport(filter: MetricsFilter): Promise<ReportModel> {
       mixedCurrency: sum.mixedCurrency,
     },
     comparison: { from: sum.previousRange.from, to: sum.previousRange.to },
+    showVariance: sum.showVariance,
     kpis: {
       spend: c.spend,
       impressions: c.impressions,

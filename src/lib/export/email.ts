@@ -77,8 +77,10 @@ function kpiGridHtml(model: ReportModel): string {
   ];
   let rows = "";
   for (let i = 0; i < tiles.length; i += 2) rows += `<tr>${tiles[i]}${tiles[i + 1] ?? ""}</tr>`;
-  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate">${rows}</table>
-    <div style="font-size:11px;color:${BRAND.muted};margin-top:6px">▲▼ % change vs. the previous period · ${model.comparison.from} – ${model.comparison.to}</div>`;
+  const caption = model.showVariance
+    ? `<div style="font-size:11px;color:${BRAND.muted};margin-top:6px">▲▼ % change vs. the previous period · ${model.comparison.from} – ${model.comparison.to}</div>`
+    : "";
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate">${rows}</table>${caption}`;
 }
 
 function channelSplitHtml(model: ReportModel): string {

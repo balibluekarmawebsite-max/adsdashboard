@@ -181,10 +181,12 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
       });
     }
   });
-  kpi.addText(
-    `▲▼ % change vs. the previous period · ${model.comparison.from} – ${model.comparison.to}`,
-    { x: startX, y: 6.55, w: 12, h: 0.35, fontSize: 10, color: MUTED },
-  );
+  if (model.showVariance) {
+    kpi.addText(
+      `▲▼ % change vs. the previous period · ${model.comparison.from} – ${model.comparison.to}`,
+      { x: startX, y: 6.55, w: 12, h: 0.35, fontSize: 10, color: MUTED },
+    );
+  }
 
   // --- Slide 3: spend over time ---
   if (model.series.length > 1) {
