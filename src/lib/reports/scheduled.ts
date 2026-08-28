@@ -1,13 +1,13 @@
 import type { ReportSchedule } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { systemMetricsFilter } from "@/lib/metrics/query";
-import { buildReport, reportSlug, type ReportModel } from "@/lib/export/report";
+import { buildReport, reportSlug } from "@/lib/export/report";
 import { reportToXlsx } from "@/lib/export/xlsx";
 import { reportToPptx } from "@/lib/export/pptx";
 import { getInsight } from "@/lib/ai/insights";
 import { toReportingDateString } from "@/lib/sync/dates";
 import { sendMail, parseRecipients } from "@/lib/mail/send";
-import { formatMoney, formatNumber, formatRatioPct, formatRoas, formatDelta } from "@/lib/format";
+import { reportEmailHtml, revenueReminderHtml } from "@/lib/export/email";
 
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const PPTX_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
@@ -52,108 +52,6 @@ export function rangeForPreset(preset: string, now = new Date()): { from: string
     default:
       return { from: minus(6), to: todayStr };
   }
-}
-
-// --- HTML email building ---------------------------------------------------
-
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function summaryHtml(md: string): string {
-  const lines = md.split("\n");
-  let html = "";
-  let inList = false;
-  const fmt = (t: string) =>
-    esc(t)
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g, "$1");
-  for (const raw of lines) {
-    const s = raw.trim();
-    if (!s) {
-      if (inList) { html += "</ul>"; inList = false; }
-      continue;
-    }
-    if (/^#{1,6}\s/.test(s)) {
-      if (inList) { html += "</ul>"; inList = false; }
-      html += `<p style="margin:14px 0 4px;font-weight:600;color:#12333F">${fmt(s.replace(/^#{1,6}\s*/, ""))}</p>`;
-    } else if (/^[-*]\s/.test(s)) {
-      if (!inList) { html += `<ul style="margin:4px 0 4px 18px;padding:0;color:#22424e">`; inList = true; }
-      html += `<li style="margin:3px 0">${fmt(s.replace(/^[-*]\s*/, ""))}</li>`;
-    } else {
-      if (inList) { html += "</ul>"; inList = false; }
-      html += `<p style="margin:6px 0;color:#22424e">${fmt(s)}</p>`;
-    }
-  }
-  if (inList) html += "</ul>";
-  return html;
-}
-
-function reportEmailHtml(model: ReportModel, summaryText: string | null, link: string): string {
-  const cur = model.scope.currency;
-  const money = (v: number | null) => (v == null ? "—" : formatMoney(v, cur));
-  const delta = (k: string) => {
-    const p = model.kpis.changePct[k];
-    return p == null ? "" : ` <span style="color:#5B7280;font-size:12px">(${formatDelta(p)})</span>`;
-  };
-  const kpis: [string, string, string][] = [
-    ["Spend", money(model.kpis.spend), delta("spend")],
-    ["Impressions", formatNumber(model.kpis.impressions), delta("impressions")],
-    ["Clicks", formatNumber(model.kpis.clicks), delta("clicks")],
-    ["CTR", formatRatioPct(model.kpis.ctr), delta("ctr")],
-    ["CPC", money(model.kpis.cpc), delta("cpc")],
-    ["ROAS", formatRoas(model.kpis.roas), delta("roas")],
-    ["Revenue", money(model.kpis.revenue), ""],
-  ];
-  const rows = kpis
-    .map(
-      ([label, value, d]) =>
-        `<tr><td style="padding:8px 12px;border-bottom:1px solid #eef2f4;color:#5B7280;font-size:13px">${label}</td>` +
-        `<td style="padding:8px 12px;border-bottom:1px solid #eef2f4;text-align:right;font-weight:600;color:#12333F">${value}${d}</td></tr>`,
-    )
-    .join("");
-
-  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;color:#12333F">
-  <div style="border-bottom:3px solid #005A7C;padding-bottom:12px;margin-bottom:16px">
-    <div style="font-size:12px;letter-spacing:2px;color:#005A7C;font-weight:700">BLUE KARMA SECRETS</div>
-    <div style="font-size:22px;font-weight:700;margin-top:4px">Ads Performance Report</div>
-    <div style="margin-top:6px;color:#005A7C;font-weight:600">${esc(model.scope.propertyLabel)} · ${esc(model.scope.platformLabel)}</div>
-    <div style="color:#5B7280;font-size:13px">${model.scope.from} → ${model.scope.to} (${model.scope.days} days)</div>
-  </div>
-  <table style="width:100%;border-collapse:collapse;border:1px solid #eef2f4;border-radius:8px;overflow:hidden">${rows}</table>
-  ${summaryText ? `<div style="margin-top:18px"><div style="font-weight:600;color:#005A7C;margin-bottom:4px">Summary &amp; recommendations</div>${summaryHtml(summaryText)}</div>` : ""}
-  <div style="margin-top:22px">
-    <a href="${link}" style="background:#005A7C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;font-size:14px">Open the dashboard</a>
-  </div>
-  <p style="margin-top:20px;color:#94a3b8;font-size:12px">Full figures are attached (Excel &amp; PowerPoint). This is an automated report from the Blue Karma Ads Dashboard.</p>
-</div>`;
-}
-
-function revenueReminderHtml(
-  monthName: string,
-  year: number,
-  missing: { code: string; name: string }[],
-  link: string,
-): string {
-  const list = missing.length
-    ? `<ul style="margin:8px 0 0 18px;padding:0;color:#22424e">${missing
-        .map((p) => `<li style="margin:3px 0">${esc(p.name)} <span style="color:#5B7280">(${esc(p.code)})</span></li>`)
-        .join("")}</ul>`
-    : `<p style="color:#0E9F6E;margin:8px 0">All properties already have ${monthName} ${year} revenue — nothing outstanding. 🎉</p>`;
-
-  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;color:#12333F">
-  <div style="border-bottom:3px solid #005A7C;padding-bottom:12px;margin-bottom:16px">
-    <div style="font-size:12px;letter-spacing:2px;color:#005A7C;font-weight:700">BLUE KARMA SECRETS</div>
-    <div style="font-size:22px;font-weight:700;margin-top:4px">Revenue submission reminder</div>
-  </div>
-  <p style="color:#22424e">Please submit <strong>${monthName} ${year}</strong> revenue so the reports and ROAS are complete.</p>
-  <div style="font-weight:600;color:#005A7C;margin-top:12px">Still missing ${monthName} ${year} revenue:</div>
-  ${list}
-  <div style="margin-top:22px">
-    <a href="${link}" style="background:#005A7C;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;font-size:14px">Enter revenue</a>
-  </div>
-  <p style="margin-top:20px;color:#94a3b8;font-size:12px">Automated reminder from the Blue Karma Ads Dashboard.</p>
-</div>`;
 }
 
 // --- Senders ---------------------------------------------------------------

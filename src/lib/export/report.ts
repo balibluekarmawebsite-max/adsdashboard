@@ -3,7 +3,7 @@
 
 import { prisma } from "@/lib/db";
 import type { MetricsFilter } from "@/lib/metrics/query";
-import { summary, timeseries, byProperty, byCampaign } from "@/lib/metrics/query";
+import { summary, timeseries, byPlatform, byProperty, byCampaign } from "@/lib/metrics/query";
 import { kindLabel } from "@/lib/properties";
 
 export interface ReportKpis {
@@ -39,6 +39,16 @@ export interface ReportRow {
   revenue?: number | null;
 }
 
+/** One channel's slice of total spend — powers the "Google vs Meta" split. */
+export interface ReportPlatformSplit {
+  platform: string; // "google" | "meta" | …
+  label: string; // "Google" | "Meta"
+  spend: number;
+  conversions: number;
+  roas: number | null;
+  sharePct: number; // 0–100 of total spend across platforms
+}
+
 export interface ReportModel {
   scope: {
     propertyLabel: string;
@@ -50,10 +60,19 @@ export interface ReportModel {
     currency: string | null;
     mixedCurrency: boolean;
   };
+  /** The immediately-preceding equal-length period the % changes compare against. */
+  comparison: { from: string; to: string };
   kpis: ReportKpis;
   series: ReportSeriesPoint[];
+  platformSplit: ReportPlatformSplit[];
   breakdown: { kind: "units" | "campaigns"; title: string; rows: ReportRow[] };
   aiSummary: string | null;
+}
+
+function platformShortLabel(platform: string): string {
+  if (platform === "google") return "Google";
+  if (platform === "meta") return "Meta";
+  return platform.replace(/^\w/, (m) => m.toUpperCase());
 }
 
 function platformLabelOf(platform: MetricsFilter["platform"]): string {
@@ -63,7 +82,24 @@ function platformLabelOf(platform: MetricsFilter["platform"]): string {
 }
 
 export async function buildReport(filter: MetricsFilter): Promise<ReportModel> {
-  const [sum, ts] = await Promise.all([summary(filter), timeseries(filter)]);
+  const [sum, ts, plat] = await Promise.all([
+    summary(filter),
+    timeseries(filter),
+    byPlatform(filter),
+  ]);
+
+  // Spend share by channel (Google vs Meta), highest spend first.
+  const totalPlatformSpend = plat.platforms.reduce((s, p) => s + p.spend, 0);
+  const platformSplit: ReportPlatformSplit[] = plat.platforms
+    .map((p) => ({
+      platform: p.platform,
+      label: platformShortLabel(p.platform),
+      spend: p.spend,
+      conversions: p.conversions,
+      roas: p.roas,
+      sharePct: totalPlatformSpend > 0 ? (p.spend / totalPlatformSpend) * 100 : 0,
+    }))
+    .sort((a, b) => b.spend - a.spend);
 
   // What is this report about?
   let propertyLabel = "All hotels";
@@ -142,6 +178,7 @@ export async function buildReport(filter: MetricsFilter): Promise<ReportModel> {
       currency: sum.currency,
       mixedCurrency: sum.mixedCurrency,
     },
+    comparison: { from: sum.previousRange.from, to: sum.previousRange.to },
     kpis: {
       spend: c.spend,
       impressions: c.impressions,
@@ -151,7 +188,9 @@ export async function buildReport(filter: MetricsFilter): Promise<ReportModel> {
       conversions: c.conversions,
       roas: c.roas,
       revenue: sum.revenue ? sum.revenue.now : null,
-      changePct: sum.changePct,
+      // Revenue change lives on sum.revenue (not sum.changePct) — fold it in so
+      // the exports can colour a Revenue delta like the dashboard does.
+      changePct: { ...sum.changePct, revenue: sum.revenue?.changePct ?? null },
     },
     series: ts.series.map((s) => ({
       date: s.date,
@@ -160,6 +199,7 @@ export async function buildReport(filter: MetricsFilter): Promise<ReportModel> {
       clicks: s.clicks,
       conversions: s.conversions,
     })),
+    platformSplit,
     breakdown,
     aiSummary: ai?.summaryText ?? null,
   };

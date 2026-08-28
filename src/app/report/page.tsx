@@ -3,16 +3,13 @@ import { auth } from "@/lib/auth";
 import { parseMetricsParams } from "@/lib/metrics/query";
 import { buildReport, type ReportSeriesPoint } from "@/lib/export/report";
 import { formatMoney, formatNumber, formatRatioPct, formatRoas, formatDelta } from "@/lib/format";
+import { BRAND, deltaArrow, deltaHex, platformHex } from "@/lib/export/theme";
 import { PrintBar } from "./print-bar";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ads Report · Blue Karma Secrets" };
 
-const NAVY = "#005A7C";
-const INK = "#12333F";
-const MUTED = "#5B7280";
-const LINE = "#e2eaee";
-const TILE = "#f2f6f8";
+const { navy: NAVY, ink: INK, muted: MUTED, border: LINE, tile: TILE } = BRAND;
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -42,24 +39,40 @@ export default async function ReportPage({
   const cur = model.scope.currency;
   const money = (v: number | null | undefined) => (v == null ? "—" : formatMoney(v, cur));
 
-  const kpis: { label: string; value: string; delta: number | null }[] = [
-    { label: "Spend", value: money(model.kpis.spend), delta: model.kpis.changePct.spend ?? null },
-    { label: "Impressions", value: formatNumber(model.kpis.impressions), delta: model.kpis.changePct.impressions ?? null },
-    { label: "Clicks", value: formatNumber(model.kpis.clicks), delta: model.kpis.changePct.clicks ?? null },
-    { label: "CTR", value: formatRatioPct(model.kpis.ctr), delta: model.kpis.changePct.ctr ?? null },
-    { label: "Conversions", value: formatNumber(model.kpis.conversions), delta: model.kpis.changePct.conversions ?? null },
-    { label: "ROAS", value: formatRoas(model.kpis.roas), delta: model.kpis.changePct.roas ?? null },
-    { label: "Revenue", value: money(model.kpis.revenue), delta: null },
-    { label: "CPC", value: money(model.kpis.cpc), delta: model.kpis.changePct.cpc ?? null },
+  // Daily spark series, derived from the timeseries (matches the dashboard cards).
+  const s = model.series;
+  const spendSpark = s.map((p) => p.spend);
+  const imprSpark = s.map((p) => p.impressions);
+  const clickSpark = s.map((p) => p.clicks);
+  const convSpark = s.map((p) => p.conversions);
+  const ctrSpark = s.map((p) => (p.impressions > 0 ? p.clicks / p.impressions : 0));
+  const cpcSpark = s.map((p) => (p.clicks > 0 ? p.spend / p.clicks : 0));
+
+  const kpis: {
+    metric: string;
+    label: string;
+    value: string;
+    delta: number | null;
+    spark: number[];
+  }[] = [
+    { metric: "spend", label: "Spend", value: money(model.kpis.spend), delta: model.kpis.changePct.spend ?? null, spark: spendSpark },
+    { metric: "impressions", label: "Impressions", value: formatNumber(model.kpis.impressions), delta: model.kpis.changePct.impressions ?? null, spark: imprSpark },
+    { metric: "clicks", label: "Clicks", value: formatNumber(model.kpis.clicks), delta: model.kpis.changePct.clicks ?? null, spark: clickSpark },
+    { metric: "ctr", label: "CTR", value: formatRatioPct(model.kpis.ctr), delta: model.kpis.changePct.ctr ?? null, spark: ctrSpark },
+    { metric: "cpc", label: "CPC", value: money(model.kpis.cpc), delta: model.kpis.changePct.cpc ?? null, spark: cpcSpark },
+    { metric: "conversions", label: "Conversions", value: formatNumber(model.kpis.conversions), delta: model.kpis.changePct.conversions ?? null, spark: convSpark },
+    { metric: "roas", label: "ROAS", value: formatRoas(model.kpis.roas), delta: model.kpis.changePct.roas ?? null, spark: [] },
+    { metric: "revenue", label: "Revenue", value: money(model.kpis.revenue), delta: model.kpis.changePct.revenue ?? null, spark: [] },
   ];
   const isCampaigns = model.breakdown.kind === "campaigns";
+  const showSplit = model.platformSplit.filter((p) => p.spend > 0).length >= 2;
 
   return (
     <div style={{ background: "#fff", color: INK }} className="min-h-screen">
       <style>{`
         :root { color-scheme: light; }
         html, body { background: #fff; }
-        @page { size: A4; margin: 13mm; }
+        @page { size: A4; margin: 12mm; }
         @media print {
           .no-print { display: none !important; }
           .report { box-shadow: none !important; margin: 0 !important; }
@@ -105,26 +118,39 @@ export default async function ReportPage({
         </header>
 
         {/* KPIs */}
-        <section className="avoid-break mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {kpis.map((k) => (
-            <div
-              key={k.label}
-              className="rounded-lg border p-3.5"
-              style={{ background: TILE, borderColor: LINE }}
-            >
-              <div className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: MUTED }}>
-                {k.label}
-              </div>
-              <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color: INK }}>
-                {k.value}
-              </div>
-              {k.delta != null && (
-                <div className="mt-0.5 text-[12px]" style={{ color: MUTED }}>
-                  {k.delta > 0 ? "▲" : k.delta < 0 ? "▼" : "•"} {formatDelta(k.delta)} vs prev
+        <section className="avoid-break mt-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {kpis.map((k) => {
+              const color = deltaHex(k.metric, k.delta);
+              return (
+                <div
+                  key={k.label}
+                  className="flex flex-col rounded-xl border p-3.5"
+                  style={{ background: TILE, borderColor: LINE }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-[11px] font-semibold tracking-wide uppercase" style={{ color: MUTED }}>
+                      {k.label}
+                    </div>
+                    {k.delta != null && (
+                      <div className="text-[11px] font-semibold tabular-nums" style={{ color }}>
+                        {deltaArrow(k.delta)} {formatDelta(Math.abs(k.delta))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-1 text-2xl font-bold tabular-nums" style={{ color: INK }}>
+                    {k.value}
+                  </div>
+                  <div className="mt-2 h-7">
+                    <Spark data={k.spark} color={color} />
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px]" style={{ color: MUTED }}>
+            ▲▼ % change vs. the previous period · {model.comparison.from} – {model.comparison.to}
+          </p>
         </section>
 
         {/* Spend trend */}
@@ -135,6 +161,41 @@ export default async function ReportPage({
           <Trend series={model.series} />
         </section>
 
+        {/* Google vs Meta */}
+        {showSplit && (
+          <section className="avoid-break mt-8 rounded-xl border p-5" style={{ borderColor: LINE }}>
+            <h2 className="mb-3 text-sm font-semibold" style={{ color: INK }}>
+              Channel split
+            </h2>
+            <div className="space-y-3.5">
+              {model.platformSplit
+                .filter((p) => p.spend > 0)
+                .map((p) => {
+                  const c = platformHex(p.platform);
+                  return (
+                    <div key={p.platform}>
+                      <div className="mb-1 flex items-center justify-between text-[13px]">
+                        <span className="flex items-center gap-2 font-medium" style={{ color: INK }}>
+                          <span className="inline-block size-2.5 rounded-full" style={{ background: c }} />
+                          {p.label}
+                        </span>
+                        <span style={{ color: MUTED }}>
+                          {money(p.spend)} · {p.sharePct.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: LINE }}>
+                        <div className="h-full rounded-full" style={{ width: `${p.sharePct}%`, background: c }} />
+                      </div>
+                      <div className="mt-1 text-[11px]" style={{ color: MUTED }}>
+                        {formatNumber(p.conversions)} conv · ROAS {formatRoas(p.roas)}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </section>
+        )}
+
         {/* Breakdown */}
         <section className="mt-8">
           <h2 className="mb-2 text-sm font-semibold" style={{ color: INK }}>
@@ -144,9 +205,6 @@ export default async function ReportPage({
             <thead>
               <tr style={{ background: NAVY, color: "#fff" }}>
                 <th className="px-3 py-2 text-left font-semibold">{isCampaigns ? "Campaign" : "Hotel"}</th>
-                {isCampaigns ? (
-                  <th className="px-3 py-2 text-left font-semibold">Platform</th>
-                ) : null}
                 <th className="px-3 py-2 text-right font-semibold">Spend</th>
                 <th className="px-3 py-2 text-right font-semibold">Impr.</th>
                 <th className="px-3 py-2 text-right font-semibold">Clicks</th>
@@ -158,24 +216,27 @@ export default async function ReportPage({
             <tbody>
               {model.breakdown.rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center" style={{ color: MUTED }}>
+                  <td colSpan={7} className="px-3 py-6 text-center" style={{ color: MUTED }}>
                     No campaigns on the report for this view.
                   </td>
                 </tr>
               ) : (
                 model.breakdown.rows.slice(0, 20).map((r, i) => (
                   <tr key={i} style={{ borderBottom: `1px solid ${LINE}` }} className="avoid-break">
-                    <td className="max-w-[24rem] truncate px-3 py-2" style={{ color: INK }}>
-                      {r.label}
-                      {r.sublabel ? (
-                        <span style={{ color: MUTED }}> · {r.sublabel}</span>
-                      ) : null}
+                    <td className="max-w-[26rem] truncate px-3 py-2" style={{ color: INK }}>
+                      <span className="inline-flex items-center gap-2">
+                        {isCampaigns && (
+                          <span
+                            className="inline-block size-2 shrink-0 rounded-full"
+                            style={{ background: platformHex(r.platform) }}
+                          />
+                        )}
+                        <span className="truncate">
+                          {r.label}
+                          {r.sublabel ? <span style={{ color: MUTED }}> · {r.sublabel}</span> : null}
+                        </span>
+                      </span>
                     </td>
-                    {isCampaigns ? (
-                      <td className="px-3 py-2 capitalize" style={{ color: MUTED }}>
-                        {r.platform}
-                      </td>
-                    ) : null}
                     <td className="px-3 py-2 text-right tabular-nums">{money(r.spend)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{formatNumber(r.impressions)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{formatNumber(r.clicks)}</td>
@@ -193,7 +254,7 @@ export default async function ReportPage({
 
         {/* AI summary */}
         {model.aiSummary ? (
-          <section className="avoid-break mt-8 rounded-lg border p-5" style={{ borderColor: LINE, background: TILE }}>
+          <section className="avoid-break mt-8 rounded-xl border p-5" style={{ borderColor: LINE, background: TILE }}>
             <h2 className="mb-2 text-sm font-semibold" style={{ color: NAVY }}>
               Summary &amp; recommendations
             </h2>
@@ -214,10 +275,29 @@ export default async function ReportPage({
   );
 }
 
+/** A tiny inline sparkline, scaled to its own min/max like the dashboard cards. */
+function Spark({ data, color }: { data: number[]; color: string }) {
+  const pts = data.filter((v) => Number.isFinite(v));
+  if (pts.length < 2) return null;
+  const W = 120;
+  const H = 26;
+  const max = Math.max(...pts);
+  const min = Math.min(...pts);
+  const rng = max - min || 1;
+  const x = (i: number) => (i / (pts.length - 1)) * W;
+  const y = (v: number) => H - 2 - ((v - min) / rng) * (H - 4);
+  const line = pts.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: "block" }}>
+      <path d={line} fill="none" stroke={color} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" opacity={0.9} />
+    </svg>
+  );
+}
+
 function Trend({ series }: { series: ReportSeriesPoint[] }) {
   if (series.length < 2) {
     return (
-      <div className="rounded-lg border p-6 text-center text-sm" style={{ borderColor: LINE, color: MUTED }}>
+      <div className="rounded-xl border p-6 text-center text-sm" style={{ borderColor: LINE, color: MUTED }}>
         Not enough data to chart this range.
       </div>
     );
@@ -239,8 +319,14 @@ function Trend({ series }: { series: ReportSeriesPoint[] }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Spend over time" style={{ display: "block" }}>
+      <defs>
+        <linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={NAVY} stopOpacity={0.18} />
+          <stop offset="100%" stopColor={NAVY} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
       <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke={LINE} strokeWidth={1} />
-      <path d={area} fill={NAVY} opacity={0.08} />
+      <path d={area} fill="url(#spendFill)" />
       <path d={line} fill="none" stroke={NAVY} strokeWidth={2.25} strokeLinejoin="round" strokeLinecap="round" />
       {ticks.map((i) => (
         <text key={i} x={x(i)} y={H - 8} fontSize={11} fill={MUTED} textAnchor={i === 0 ? "start" : i === series.length - 1 ? "end" : "middle"}>
@@ -256,24 +342,24 @@ function Summary({ text }: { text: string }) {
   return (
     <div className="space-y-1.5 text-[13px] leading-relaxed" style={{ color: "#22424e" }}>
       {lines.map((raw, i) => {
-        const s = raw.trim();
-        if (!s) return null;
+        const str = raw.trim();
+        if (!str) return null;
         const clean = (t: string) => t.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
-        if (/^#{1,6}\s/.test(s)) {
+        if (/^#{1,6}\s/.test(str)) {
           return (
             <p key={i} className="mt-3 font-semibold" style={{ color: INK }}>
-              {clean(s.replace(/^#{1,6}\s*/, ""))}
+              {clean(str.replace(/^#{1,6}\s*/, ""))}
             </p>
           );
         }
-        if (/^[-*]\s/.test(s)) {
+        if (/^[-*]\s/.test(str)) {
           return (
             <p key={i} className="pl-4">
-              • {clean(s.replace(/^[-*]\s*/, ""))}
+              • {clean(str.replace(/^[-*]\s*/, ""))}
             </p>
           );
         }
-        return <p key={i}>{clean(s)}</p>;
+        return <p key={i}>{clean(str)}</p>;
       })}
     </div>
   );

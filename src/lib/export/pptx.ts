@@ -1,24 +1,25 @@
 import pptxgen from "pptxgenjs";
 import type { ReportModel } from "./report";
 import { formatMoney, formatNumber, formatRatioPct, formatRoas } from "@/lib/format";
+import { BRAND, deltaArrow, deltaHex, platformHex, pptxColor } from "./theme";
 
-// A branded slide deck for the current report view. Pure JS (pptxgenjs) — no
-// native dependencies, so it runs fine on the production server.
+// A branded slide deck for the current report view, styled to match the live
+// dashboard (same navy, same favorable/unfavorable delta colours, same channel
+// split). Pure JS (pptxgenjs) — no native deps, so it runs on the server.
 
-const NAVY = "005A7C";
-const INK = "12333F";
-const MUTED = "5B7280";
-const TILE = "EEF3F6";
-const LINE = "D8E2E8";
+const NAVY = pptxColor(BRAND.navy);
+const INK = pptxColor(BRAND.ink);
+const MUTED = pptxColor(BRAND.muted);
+const TILE = pptxColor(BRAND.tile);
+const LINE = pptxColor(BRAND.border);
+const SOFT = pptxColor(BRAND.accent);
 const WHITE = "FFFFFF";
-const SOFT = "CDE3EC";
 
 const SLIDE_W = 13.333;
 
 function deltaText(pct: number | null | undefined): string {
   if (pct == null) return "";
-  const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "•";
-  return `${arrow} ${Math.abs(pct).toFixed(1)}% vs prev`;
+  return `${deltaArrow(pct)} ${Math.abs(pct).toFixed(1)}% vs prev`;
 }
 
 function stripMarkdown(md: string): string {
@@ -97,10 +98,14 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
     ],
     { x: 0.9, y: 3.7, w: 11.5, h: 0.5, fontSize: 18 },
   );
-  title.addText(
-    `${model.scope.from} → ${model.scope.to}  (${model.scope.days} days)`,
-    { x: 0.9, y: 4.25, w: 11.5, h: 0.4, fontSize: 14, color: MUTED },
-  );
+  title.addText(`${model.scope.from} → ${model.scope.to}  (${model.scope.days} days)`, {
+    x: 0.9,
+    y: 4.25,
+    w: 11.5,
+    h: 0.4,
+    fontSize: 14,
+    color: MUTED,
+  });
   title.addText(`Generated ${new Date(model.scope.generatedAt).toLocaleString("en-US")}`, {
     x: 0.9,
     y: 6.7,
@@ -110,30 +115,30 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
     color: MUTED,
   });
 
-  // --- Slide 2: KPI tiles ---
+  // --- Slide 2: KPI tiles (delta coloured by whether the change is favorable) ---
   const kpi = pptx.addSlide();
   kpi.background = { color: WHITE };
   headerBar(kpi, pptx, "Key metrics");
-  const tiles: { label: string; value: string; delta: string }[] = [
-    { label: "Spend", value: money(model.kpis.spend), delta: deltaText(model.kpis.changePct.spend) },
-    { label: "Impressions", value: formatNumber(model.kpis.impressions), delta: deltaText(model.kpis.changePct.impressions) },
-    { label: "Clicks", value: formatNumber(model.kpis.clicks), delta: deltaText(model.kpis.changePct.clicks) },
-    { label: "CTR", value: formatRatioPct(model.kpis.ctr), delta: deltaText(model.kpis.changePct.ctr) },
-    { label: "Conversions", value: formatNumber(model.kpis.conversions), delta: deltaText(model.kpis.changePct.conversions) },
-    { label: "ROAS", value: formatRoas(model.kpis.roas), delta: deltaText(model.kpis.changePct.roas) },
-    { label: "Revenue", value: money(model.kpis.revenue), delta: "" },
-    { label: "CPC", value: money(model.kpis.cpc), delta: deltaText(model.kpis.changePct.cpc) },
+  const tiles: { label: string; value: string; metric: string; pct: number | null }[] = [
+    { label: "Spend", value: money(model.kpis.spend), metric: "spend", pct: model.kpis.changePct.spend ?? null },
+    { label: "Impressions", value: formatNumber(model.kpis.impressions), metric: "impressions", pct: model.kpis.changePct.impressions ?? null },
+    { label: "Clicks", value: formatNumber(model.kpis.clicks), metric: "clicks", pct: model.kpis.changePct.clicks ?? null },
+    { label: "CTR", value: formatRatioPct(model.kpis.ctr), metric: "ctr", pct: model.kpis.changePct.ctr ?? null },
+    { label: "CPC", value: money(model.kpis.cpc), metric: "cpc", pct: model.kpis.changePct.cpc ?? null },
+    { label: "Conversions", value: formatNumber(model.kpis.conversions), metric: "conversions", pct: model.kpis.changePct.conversions ?? null },
+    { label: "ROAS", value: formatRoas(model.kpis.roas), metric: "roas", pct: model.kpis.changePct.roas ?? null },
+    { label: "Revenue", value: money(model.kpis.revenue), metric: "revenue", pct: model.kpis.changePct.revenue ?? null },
   ];
   const cols = 4;
   const tW = 2.93;
-  const tH = 2.35;
+  const tH = 2.15;
   const gap = 0.3;
   const startX = (SLIDE_W - (cols * tW + (cols - 1) * gap)) / 2;
   tiles.forEach((t, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const x = startX + col * (tW + gap);
-    const y = 1.35 + row * (tH + gap);
+    const y = 1.3 + row * (tH + gap);
     kpi.addShape(pptx.ShapeType.roundRect, {
       x,
       y,
@@ -155,25 +160,31 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
     });
     kpi.addText(t.value, {
       x: x + 0.2,
-      y: y + 0.62,
+      y: y + 0.6,
       w: tW - 0.4,
-      h: 0.9,
+      h: 0.85,
       fontSize: 21,
       bold: true,
       color: INK,
       fit: "shrink",
     });
-    if (t.delta) {
-      kpi.addText(t.delta, {
+    const dt = deltaText(t.pct);
+    if (dt) {
+      kpi.addText(dt, {
         x: x + 0.2,
-        y: y + tH - 0.55,
+        y: y + tH - 0.5,
         w: tW - 0.4,
         h: 0.35,
         fontSize: 11,
-        color: MUTED,
+        bold: true,
+        color: pptxColor(deltaHex(t.metric, t.pct)),
       });
     }
   });
+  kpi.addText(
+    `▲▼ % change vs. the previous period · ${model.comparison.from} – ${model.comparison.to}`,
+    { x: startX, y: 6.55, w: 12, h: 0.35, fontSize: 10, color: MUTED },
+  );
 
   // --- Slide 3: spend over time ---
   if (model.series.length > 1) {
@@ -181,7 +192,7 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
     trend.background = { color: WHITE };
     headerBar(trend, pptx, "Spend over time");
     trend.addChart(
-      pptx.ChartType.line,
+      pptx.ChartType.area,
       [
         {
           name: "Spend",
@@ -195,6 +206,7 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
         w: 12.33,
         h: 5.7,
         chartColors: [NAVY],
+        chartColorsOpacity: 22,
         lineSize: 2.5,
         lineSmooth: true,
         showLegend: false,
@@ -209,7 +221,65 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
     );
   }
 
-  // --- Slide 4: breakdown table ---
+  // --- Slide 4: channel split (Google vs Meta), when there are 2+ channels ---
+  const channels = model.platformSplit.filter((p) => p.spend > 0);
+  if (channels.length >= 2) {
+    const cs = pptx.addSlide();
+    cs.background = { color: WHITE };
+    headerBar(cs, pptx, "Channel split");
+    const trackW = 12.1;
+    let y = 1.6;
+    channels.forEach((p) => {
+      const c = pptxColor(platformHex(p.platform));
+      const share = Math.max(0, Math.min(100, p.sharePct));
+      cs.addText(
+        [
+          { text: "● ", options: { color: c } },
+          { text: p.label, options: { bold: true, color: INK } },
+        ],
+        { x: 0.6, y, w: 7, h: 0.4, fontSize: 16, valign: "middle" },
+      );
+      cs.addText(`${money(p.spend)}   ·   ${share.toFixed(0)}%`, {
+        x: 6.7,
+        y,
+        w: 6,
+        h: 0.4,
+        fontSize: 14,
+        color: MUTED,
+        align: "right",
+        valign: "middle",
+      });
+      y += 0.5;
+      cs.addShape(pptx.ShapeType.roundRect, {
+        x: 0.6,
+        y,
+        w: trackW,
+        h: 0.32,
+        rectRadius: 0.16,
+        fill: { color: LINE },
+      });
+      cs.addShape(pptx.ShapeType.roundRect, {
+        x: 0.6,
+        y,
+        w: Math.max(0.12, (trackW * share) / 100),
+        h: 0.32,
+        rectRadius: 0.16,
+        fill: { color: c },
+      });
+      y += 0.5;
+      cs.addText(`${formatNumber(p.conversions)} conv    ·    ROAS ${formatRoas(p.roas)}`, {
+        x: 0.6,
+        y,
+        w: trackW,
+        h: 0.35,
+        fontSize: 11,
+        color: MUTED,
+      });
+      y += 0.85;
+    });
+  }
+
+  // --- Slide 5: breakdown table ---
   const isCampaigns = model.breakdown.kind === "campaigns";
   const table = pptx.addSlide();
   table.background = { color: WHITE };
@@ -247,7 +317,7 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
     autoPage: false,
   });
 
-  // --- Slide 5: AI summary (only if one exists for this view) ---
+  // --- Slide 6: AI summary (only if one exists for this view) ---
   if (model.aiSummary) {
     const s = pptx.addSlide();
     s.background = { color: WHITE };
