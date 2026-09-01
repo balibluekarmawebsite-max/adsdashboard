@@ -289,7 +289,7 @@ export async function reportToPptx(model: ReportModel): Promise<Buffer> {
 
   const head = isCampaigns
     ? ["Campaign", "Platform", "Spend", "Clicks", "Conv.", "ROAS"]
-    : ["Hotel", "Spend", "Impressions", "Clicks", "Conv.", "ROAS", "Revenue"];
+    : ["Property", "Spend", "Impressions", "Clicks", "Conv.", "ROAS", "Revenue"];
   const headRow = head.map((h) => ({
     text: h,
     options: { bold: true, color: WHITE, fill: { color: NAVY }, fontSize: 11, align: "left" as const },

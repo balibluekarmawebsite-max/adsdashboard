@@ -119,7 +119,7 @@ function breakdownHtml(model: ReportModel): string {
   if (rows.length === 0) return "";
   const th = (t: string, right = false) =>
     `<th align="${right ? "right" : "left"}" style="padding:7px 10px;font-size:11px;font-weight:600;color:#fff;background:${BRAND.navy}">${t}</th>`;
-  const header = `<tr>${th(isCampaigns ? "Campaign" : "Hotel")}${th("Spend", true)}${th("Clicks", true)}${th("Conv.", true)}${th("ROAS", true)}</tr>`;
+  const header = `<tr>${th(isCampaigns ? "Campaign" : "Property")}${th("Spend", true)}${th("Clicks", true)}${th("Conv.", true)}${th("ROAS", true)}</tr>`;
   const body = rows
     .map((r) => {
       const dot = isCampaigns

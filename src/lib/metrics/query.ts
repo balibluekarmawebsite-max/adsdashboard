@@ -53,6 +53,14 @@ export interface MetricsFilter {
    * of the hotel totals. Ignored when `propertyId` is set.
    */
   propertyIds?: string[];
+  /**
+   * Scope for the per-property breakdown (byProperty). Unlike `propertyIds`
+   * (hotels-only for the blended totals), this includes outlets so the
+   * "Properties by spend" list shows restaurants/spas too. `undefined` = every
+   * property; a restricted user's allowed ids otherwise. Ignored when
+   * `propertyId` is set.
+   */
+  breakdownPropertyIds?: string[];
   platform?: PlatformName;
   /** External ids of campaigns shown on the report; undefined = no filter. */
   includedCampaignIds?: string[];
@@ -114,6 +122,9 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
   // their allowed properties; everyone else sees top-level hotels (so outlets
   // are never mixed into the blended total).
   const propertyIds = propertyId ? undefined : (allowed ?? (await topLevelPropertyIds()));
+  // Per-property breakdown spans outlets too: all properties for an unrestricted
+  // user, or exactly the allowed set for a restricted one.
+  const breakdownPropertyIds = propertyId ? undefined : (allowed ?? undefined);
   return {
     from: from.date,
     to: to.date,
@@ -122,6 +133,7 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
     days,
     propertyId,
     propertyIds,
+    breakdownPropertyIds,
     platform,
     includedCampaignIds,
   };
@@ -149,7 +161,18 @@ export async function systemMetricsFilter(
   const days = Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1;
   const includedCampaignIds = (await includedCampaignFilter()) ?? undefined;
   const propertyIds = propertyId ? undefined : await topLevelPropertyIds();
-  return { from, to, fromStr, toStr, days, propertyId, propertyIds, includedCampaignIds };
+  // Breakdown spans every property (outlets included) for these unrestricted jobs.
+  return {
+    from,
+    to,
+    fromStr,
+    toStr,
+    days,
+    propertyId,
+    propertyIds,
+    breakdownPropertyIds: undefined,
+    includedCampaignIds,
+  };
 }
 
 type Where = {
@@ -316,9 +339,10 @@ export async function byPlatform(filter: MetricsFilter) {
 }
 
 export async function byProperty(filter: MetricsFilter) {
+  // Use the breakdown scope (includes outlets), not the hotels-only blended scope.
   const groups = await prisma.metricsDaily.groupBy({
     by: ["propertyId"],
-    where: whereFor(filter),
+    where: whereFor({ ...filter, propertyIds: filter.breakdownPropertyIds }),
     _sum: SUM,
   });
   const props = await prisma.property.findMany({

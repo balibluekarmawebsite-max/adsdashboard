@@ -206,7 +206,7 @@ export default async function ReportPage({
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr style={{ background: NAVY, color: "#fff" }}>
-                <th className="px-3 py-2 text-left font-semibold">{isCampaigns ? "Campaign" : "Hotel"}</th>
+                <th className="px-3 py-2 text-left font-semibold">{isCampaigns ? "Campaign" : "Property"}</th>
                 <th className="px-3 py-2 text-right font-semibold">Spend</th>
                 <th className="px-3 py-2 text-right font-semibold">Impr.</th>
                 <th className="px-3 py-2 text-right font-semibold">Clicks</th>

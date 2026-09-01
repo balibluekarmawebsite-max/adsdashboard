@@ -139,7 +139,7 @@ export async function buildReport(filter: MetricsFilter): Promise<ReportModel> {
     const bp = await byProperty(filter);
     breakdown = {
       kind: "units",
-      title: "By hotel",
+      title: "By property",
       rows: bp.properties.map((p) => ({
         label: p.name ?? p.code ?? "—",
         sublabel: p.code ?? undefined,

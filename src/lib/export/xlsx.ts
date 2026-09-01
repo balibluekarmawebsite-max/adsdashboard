@@ -45,7 +45,7 @@ export function reportToXlsx(model: ReportModel): Buffer {
   const isCampaigns = model.breakdown.kind === "campaigns";
   const header = isCampaigns
     ? ["Campaign", "Platform", "Spend", "Impressions", "Clicks", "CTR (%)", "Conversions", "ROAS (×)"]
-    : ["Hotel", "Code", "Spend", "Impressions", "Clicks", "CTR (%)", "Conversions", "ROAS (×)", "Revenue"];
+    : ["Property", "Code", "Spend", "Impressions", "Clicks", "CTR (%)", "Conversions", "ROAS (×)", "Revenue"];
   const rows = model.breakdown.rows.map((r) =>
     isCampaigns
       ? [r.label, r.platform ?? "", n(r.spend), n(r.impressions), n(r.clicks), pct(r.ctr), n(r.conversions), n(r.roas)]
