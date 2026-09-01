@@ -1,7 +1,13 @@
+"use client";
+
+import { useId } from "react";
 import { cn } from "@/lib/utils";
 
-/** Tiny inline sparkline. Uses currentColor so the parent sets the tone. */
+/** Tiny inline sparkline with a soft gradient fill. Uses currentColor so the
+ *  parent sets the tone (the KPI cards use the brand chart colour). */
 export function Sparkline({ data, className }: { data: number[]; className?: string }) {
+  const gradientId = `spark-${useId().replace(/:/g, "")}`;
+
   if (!data || data.length < 2)
     return <div className={cn("h-full w-full", className)} aria-hidden />;
 
@@ -25,7 +31,13 @@ export function Sparkline({ data, className }: { data: number[]; className?: str
       className={cn("h-full w-full", className)}
       aria-hidden
     >
-      <path d={area} fill="currentColor" opacity={0.12} />
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity={0.3} />
+          <stop offset="100%" stopColor="currentColor" stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradientId})`} />
       <path
         d={line}
         fill="none"
@@ -34,7 +46,6 @@ export function Sparkline({ data, className }: { data: number[]; className?: str
         strokeLinecap="round"
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"
-        opacity={0.9}
       />
     </svg>
   );

@@ -51,7 +51,9 @@ export function KpiCard({
       <p className="mt-2 text-xl font-semibold tracking-tight tabular-nums xl:text-2xl">
         {value == null ? "—" : format(animated)}
       </p>
-      <div className={cn("mt-3 h-8", SENTIMENT_CLASS[sentiment])}>
+      {/* Sparkline uses the brand chart colour (matches "Performance over time"),
+          independent of the variance sentiment which colours the delta above. */}
+      <div className="mt-3 h-8 text-[color:var(--chart-1)]">
         <Sparkline data={spark} />
       </div>
     </div>
