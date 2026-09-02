@@ -22,12 +22,13 @@ export async function revenueForRange(
 ): Promise<number> {
   // A specific property → just its revenue. A scoped set (a restricted user's
   // allowed properties) → those. Otherwise the blended total, scoped to
-  // top-level hotels so outlet revenue isn't folded into the hotel ROAS.
+  // top-level hotels so neither outlet nor wellness revenue is folded into the
+  // hotel ROAS.
   const where = opts?.propertyId
     ? { propertyId: opts.propertyId }
     : opts?.propertyIds
       ? { propertyId: { in: opts.propertyIds } }
-      : { property: { parentId: null } };
+      : { property: { parentId: null, kind: "hotel" as const } };
 
   const [monthlyRows, periodRows] = await Promise.all([
     prisma.revenueMonthly.findMany({

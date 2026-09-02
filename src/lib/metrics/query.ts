@@ -69,10 +69,14 @@ export interface MetricsFilter {
   includedCampaignIds?: string[];
 }
 
-/** Ids of top-level properties (hotels) — everything without a parent. */
+/**
+ * Ids of the top-level HOTELS — parent-less properties of kind "hotel". Other
+ * top-level units (e.g. WELLNESS BLUE KARMA) are peers of the hotels but stay
+ * out of the blended "All hotels" total, so they're excluded here.
+ */
 async function topLevelPropertyIds(): Promise<string[]> {
   const rows = await prisma.property.findMany({
-    where: { parentId: null },
+    where: { parentId: null, kind: "hotel" },
     select: { id: true },
   });
   return rows.map((r) => r.id);
