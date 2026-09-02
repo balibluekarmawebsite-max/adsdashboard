@@ -2,7 +2,7 @@
 
 import { useByPlatform, useSummary } from "@/lib/metrics/client";
 import { ChartCard } from "./chart-card";
-import { formatNumber, formatMoney, formatRoas } from "@/lib/format";
+import { formatNumber, formatMoney } from "@/lib/format";
 
 const PLATFORM_META: Record<string, { label: string; color: string }> = {
   google: { label: "Google", color: "var(--platform-google)" },
@@ -18,7 +18,6 @@ export function PlatformSplit() {
   const rows = ["google", "meta"]
     .map((p) => found.find((x) => x.platform === p))
     .filter((x): x is NonNullable<typeof x> => Boolean(x));
-  const totalSpend = rows.reduce((s, r) => s + r.spend, 0);
   const maxSpend = Math.max(1, ...rows.map((r) => r.spend));
 
   return (
@@ -37,7 +36,6 @@ export function PlatformSplit() {
         <div className="space-y-5">
           {rows.map((r) => {
             const meta = PLATFORM_META[r.platform];
-            const share = totalSpend > 0 ? (r.spend / totalSpend) * 100 : 0;
             return (
               <div key={r.platform} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
@@ -50,7 +48,7 @@ export function PlatformSplit() {
                     {meta.label}
                   </span>
                   <span className="text-muted-foreground tabular-nums">
-                    {formatMoney(r.spend, currency)} · {share.toFixed(0)}%
+                    {formatMoney(r.spend, currency)}
                   </span>
                 </div>
                 <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
@@ -61,7 +59,6 @@ export function PlatformSplit() {
                 </div>
                 <div className="text-muted-foreground flex gap-4 text-xs tabular-nums">
                   <span>{formatNumber(r.conversions)} conv.</span>
-                  <span>ROAS {formatRoas(r.roas)}</span>
                 </div>
               </div>
             );
