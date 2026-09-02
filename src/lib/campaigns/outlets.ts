@@ -3,7 +3,7 @@
 // single source of truth for the outlet list and is client-safe (no prisma
 // import), so both the seed script and the UI can use it.
 
-export type OutletKind = "restaurant" | "spa";
+export type OutletKind = "restaurant" | "spa" | "wellness";
 
 export interface OutletDef {
   /** Property code, e.g. "BKDU-RES". */
@@ -30,12 +30,17 @@ export const OUTLETS: OutletDef[] = [
     name: "Flying Bamboo Spa",
     keywords: ["flying bamboo", "bamboo spa"],
   },
+  // Two hotels each have a Wellness outlet. "Wellness" alone can't tell Ubud from
+  // Village, so these have NO auto-route keywords — assign their campaigns to the
+  // right one by hand on the Campaigns page (a manual assignment is permanent).
+  { code: "BKDU-WELL", parentCode: "BKDU", kind: "wellness", name: "Wellness", keywords: [] },
   // Blue Karma Dijiwa Seminyak
   { code: "BKDS-RES", parentCode: "BKDS", kind: "restaurant", name: "Bketo", keywords: ["bketo"] },
   { code: "BKDS-SPA", parentCode: "BKDS", kind: "spa", name: "Mudara Spa", keywords: ["mudara"] },
   // Blue Karma Village
   { code: "BKV-RES", parentCode: "BKV", kind: "restaurant", name: "Hiiragi", keywords: ["hiiragi"] },
   { code: "BKV-SPA", parentCode: "BKV", kind: "spa", name: "Heiwa Spa", keywords: ["heiwa"] },
+  { code: "BKV-WELL", parentCode: "BKV", kind: "wellness", name: "Wellness", keywords: [] },
 ];
 
 const OUTLET_BY_CODE = new Map(OUTLETS.map((o) => [o.code, o]));

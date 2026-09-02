@@ -47,6 +47,7 @@ const KIND_LABEL: Record<string, string> = {
   hotel: "Hotel",
   restaurant: "Restaurant",
   spa: "Spa",
+  wellness: "Wellness",
 };
 
 export const kindLabel = (kind: string): string => KIND_LABEL[kind] ?? kind;
