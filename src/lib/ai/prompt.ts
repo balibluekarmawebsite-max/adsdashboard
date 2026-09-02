@@ -35,6 +35,13 @@ export function systemPrompt(language: InsightLanguage): string {
     "  null (e.g. revenue not entered yet), simply omit it — do not guess, do not describe it as a problem.",
     "- Refer to properties by name (Seminyak / Ubud / Village).",
     "",
+    "Level of detail (IMPORTANT):",
+    "- Keep the summary HIGH-LEVEL. Do NOT name, list, or break performance down campaign by campaign, and",
+    "  do not quote any single campaign's numbers. Summarize the overall result, and where useful by",
+    "  property (Seminyak / Ubud / Village) and by platform (Google vs Meta).",
+    "- Recommendations must be general (e.g. shift budget toward the better-performing platform or",
+    "  property, refresh creative, watch CPC) — never about a specific named campaign.",
+    "",
     "Number formatting (CRITICAL — never break):",
     "- Every money and count value in the snapshot is ALREADY written in full with thousands separators.",
     "  Reproduce each number EXACTLY as given, digit for digit, keeping the separators (e.g. 281,451,000).",
@@ -56,7 +63,7 @@ export function systemPrompt(language: InsightLanguage): string {
     "  it. Keep sentences short and easy to read.",
     "",
     "Tone & focus (this is a report to the owner):",
-    "- Lead with what is going WELL: strong ROAS, top-performing properties and campaigns, efficient spend,",
+    "- Lead with what is going WELL: strong ROAS, revenue, efficient spend, top-performing properties,",
     "  and growth versus the previous period. Keep it confident and positive.",
     "- Do NOT dwell on problems or use negative language. If something could be improved, mention it only in",
     "  Recommendations, briefly and constructively — framed as an opportunity to grow, never as a fault.",
@@ -64,8 +71,9 @@ export function systemPrompt(language: InsightLanguage): string {
     "Output format — ALWAYS use exactly these three markdown sections, in this order:",
     "**Headline** — 2-3 plain sentences on how the period went. Lead with the revenue earned and the ROAS,",
     "explained simply (revenue from spend = N× return).",
-    "**Highlights** — 3-5 bullets of what went well. Include one bullet that states the revenue and the ad",
-    "spend together with the ROAS explained in plain words; the rest cover the top campaign/property, CTR,",
+    "**Highlights** — 3-5 bullets of what went well, at the overall / property / platform level (NOT per",
+    "campaign). Include one bullet that states the revenue and the ad spend together with the ROAS",
+    "explained in plain words; the rest cover property and platform (Google vs Meta) results, CTR,",
     "conversions and growth. Explain what each number means, don't just quote it.",
     "**Recommendations** — 2-3 short, practical bullets on how to build on this success or capture the next",
     "opportunity.",
@@ -79,11 +87,21 @@ function grp(n: number | null | undefined): string | null {
   return n == null ? null : Number(n).toLocaleString("en-US");
 }
 
-/** Money/count fields become full grouped strings so the model can't abbreviate. */
+/**
+ * Money/count fields become full grouped strings so the model can't abbreviate.
+ * Per-campaign arrays (topCampaigns, biggestMovers) are intentionally omitted so
+ * the summary stays high-level and never breaks performance down campaign by
+ * campaign or names a single campaign.
+ */
 function displaySnapshot(s: InsightSnapshot): Record<string, unknown> {
   const money = (k: Kpi) => ({ now: grp(k.now), prev: grp(k.prev), changePct: k.changePct });
   return {
-    ...s,
+    period: s.period,
+    comparisonPeriod: s.comparisonPeriod,
+    filters: s.filters,
+    units: s.units,
+    currency: s.currency,
+    mixedCurrency: s.mixedCurrency,
     kpis: {
       spend: money(s.kpis.spend),
       impressions: money(s.kpis.impressions),
@@ -104,12 +122,6 @@ function displaySnapshot(s: InsightSnapshot): Record<string, unknown> {
       conversions: grp(p.conversions),
     })),
     byProperty: s.byProperty.map((p) => ({ ...p, spend: grp(p.spend), conversions: grp(p.conversions) })),
-    topCampaigns: s.topCampaigns.map((c) => ({ ...c, spend: grp(c.spend) })),
-    biggestMovers: s.biggestMovers.map((m) => ({
-      ...m,
-      spendNow: grp(m.spendNow),
-      spendPrev: grp(m.spendPrev),
-    })),
   };
 }
 

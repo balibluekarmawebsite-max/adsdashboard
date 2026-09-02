@@ -28,7 +28,7 @@ export interface InsightResult {
 
 // Bump when the prompt/output format changes so stale cached summaries are
 // invalidated and regenerated in the new style on next view.
-const PROMPT_VERSION = "owner-report-v3-plain-roas";
+const PROMPT_VERSION = "owner-report-v4-no-campaign-detail";
 
 function hashFilters(filter: MetricsFilter, language: string, dataSignature: string): string {
   const key = [
