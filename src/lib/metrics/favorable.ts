@@ -6,6 +6,7 @@ type Direction = "up" | "down" | "neutral";
 
 const FAVORABLE: Record<string, Direction> = {
   impressions: "up",
+  reach: "up",
   clicks: "up",
   conversions: "up",
   conversionValue: "up",

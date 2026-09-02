@@ -20,6 +20,7 @@ export function KpiCard({
   deltaTitle,
   sentiment,
   spark,
+  hint,
 }: {
   label: string;
   value: number | null;
@@ -28,13 +29,25 @@ export function KpiCard({
   deltaTitle?: string;
   sentiment: Sentiment;
   spark: number[];
+  /** Optional small marker after the label (e.g. an "approx" note with a tooltip). */
+  hint?: string;
 }) {
   const animated = useCountUp(value ?? 0);
 
   return (
     <div className="border-border bg-card rounded-xl border p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-muted-foreground text-xs font-medium">{label}</p>
+        <p className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
+          {label}
+          {hint && (
+            <span
+              title={hint}
+              className="border-border text-muted-foreground/70 cursor-help rounded border px-1 text-[9px] font-semibold tracking-wide uppercase"
+            >
+              approx
+            </span>
+          )}
+        </p>
         {delta != null && (
           <span
             title={deltaTitle}

@@ -9,6 +9,7 @@ export interface NormalizedMetricRow {
   campaignId: string;
   campaignName: string;
   impressions: number;
+  reach: number; // unique people reached (Meta only; 0 for Google)
   clicks: number;
   spend: number; // in the account currency (Google cost_micros already ÷ 1e6)
   conversions: number;

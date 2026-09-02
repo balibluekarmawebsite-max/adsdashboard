@@ -3,6 +3,7 @@
 
 export interface Totals {
   impressions: number;
+  reach: number; // unique people (Meta only); summing across days over-counts — approximate
   clicks: number;
   spend: number;
   conversions: number;

@@ -194,6 +194,7 @@ model MetricsDaily {
   campaignId      String
   campaignName    String
   impressions     Int      @default(0)
+  reach           Int      @default(0) // unique people (Meta only; 0 for Google). Non-additive across days.
   clicks          Int      @default(0)
   spend           Decimal  @default(0) @db.Decimal(18, 4) // money — Decimal, never Float
   conversions     Decimal  @default(0) @db.Decimal(14, 4)

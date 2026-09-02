@@ -12,6 +12,7 @@ export async function upsertMetricRow(row: NormalizedMetricRow): Promise<void> {
     propertyId: row.propertyId, // updatable, so re-syncing applies routing changes
     campaignName: row.campaignName,
     impressions: Math.round(row.impressions),
+    reach: Math.round(row.reach),
     clicks: Math.round(row.clicks),
     spend: row.spend,
     conversions: row.conversions,

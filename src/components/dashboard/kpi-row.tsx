@@ -7,7 +7,15 @@ import { KpiCardSkeleton } from "./skeletons";
 import { sentiment } from "@/lib/metrics/favorable";
 import { formatNumber, formatMoney, formatRatioPct, formatRoas } from "@/lib/format";
 
-type MetricKey = "spend" | "impressions" | "clicks" | "ctr" | "cpc" | "conversions" | "roas";
+type MetricKey =
+  | "spend"
+  | "impressions"
+  | "reach"
+  | "clicks"
+  | "ctr"
+  | "cpc"
+  | "conversions"
+  | "roas";
 
 const container: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = {
@@ -29,8 +37,8 @@ export function KpiRow() {
 
   if (isLoading || !summary) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        {Array.from({ length: 7 }).map((_, i) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
           <KpiCardSkeleton key={i} />
         ))}
       </div>
@@ -54,9 +62,19 @@ export function KpiRow() {
     format: (n: number) => string;
     delta: number | null;
     spark: number[];
+    hint?: string;
   }[] = [
     { key: "spend", label: "Spend", value: c.spend, format: moneyExact, delta: chg.spend, spark: spark("spend") },
     { key: "impressions", label: "Impressions", value: c.impressions, format: formatNumber, delta: chg.impressions, spark: spark("impressions") },
+    {
+      key: "reach",
+      label: "Reach",
+      value: c.reach,
+      format: formatNumber,
+      delta: chg.reach,
+      spark: spark("reach"),
+      hint: "Meta only. Unique people don’t add up across days, so a multi-day total is approximate.",
+    },
     { key: "clicks", label: "Clicks", value: c.clicks, format: formatNumber, delta: chg.clicks, spark: spark("clicks") },
     { key: "ctr", label: "CTR", value: c.ctr, format: (n) => formatRatioPct(n), delta: chg.ctr, spark: spark("ctr") },
     { key: "cpc", label: "CPC", value: c.cpc, format: moneyExact, delta: chg.cpc, spark: spark("cpc") },
@@ -109,6 +127,7 @@ export function KpiRow() {
               deltaTitle={deltaTitle}
               sentiment={sentiment(k.key, k.delta)}
               spark={k.spark}
+              hint={k.hint}
             />
           </motion.div>
         ))}

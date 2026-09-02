@@ -16,6 +16,7 @@ export interface MetaInsightRow {
   campaign_id?: string;
   campaign_name?: string;
   impressions?: string | number;
+  reach?: string | number;
   clicks?: string | number;
   spend?: string | number;
   actions?: MetaAction[];
@@ -65,6 +66,7 @@ export function normalizeMetaRows(
     campaignId: String(r.campaign_id ?? ""),
     campaignName: String(r.campaign_name ?? ""),
     impressions: Number(r.impressions ?? 0),
+    reach: Number(r.reach ?? 0),
     clicks: Number(r.clicks ?? 0),
     spend: Number(r.spend ?? 0), // already in account currency
     conversions: sumActions(r.actions, conversionTypes),
@@ -87,7 +89,7 @@ export function buildInsightsUrl(
     level: "campaign",
     time_increment: "1",
     time_range: JSON.stringify({ since, until }),
-    fields: "campaign_id,campaign_name,impressions,clicks,spend,actions,action_values",
+    fields: "campaign_id,campaign_name,impressions,reach,clicks,spend,actions,action_values",
     limit: String(limit),
     access_token: token,
   });

@@ -51,6 +51,7 @@ export function normalizeGoogleRows(
       campaignId: String(row.campaign?.id ?? ""),
       campaignName: String(row.campaign?.name ?? ""),
       impressions: Number(m.impressions ?? 0),
+      reach: 0, // Google Ads doesn't report unique reach for these campaigns
       clicks: Number(m.clicks ?? 0),
       spend: Number(m.cost_micros ?? 0) / 1_000_000,
       conversions: Number(m.conversions ?? 0),

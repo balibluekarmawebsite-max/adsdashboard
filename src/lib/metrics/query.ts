@@ -12,6 +12,7 @@ const num = (x: unknown): number => (x == null ? 0 : Number(x));
 
 const SUM = {
   impressions: true,
+  reach: true,
   clicks: true,
   spend: true,
   conversions: true,
@@ -20,6 +21,7 @@ const SUM = {
 
 type SumShape = {
   impressions: number | null;
+  reach: number | null;
   clicks: number | null;
   spend: unknown;
   conversions: unknown;
@@ -29,6 +31,7 @@ type SumShape = {
 function totalsFromSum(s: SumShape | null | undefined): Totals {
   return {
     impressions: num(s?.impressions),
+    reach: num(s?.reach),
     clicks: num(s?.clicks),
     spend: num(s?.spend),
     conversions: num(s?.conversions),
