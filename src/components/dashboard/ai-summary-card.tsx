@@ -213,8 +213,9 @@ export function AiSummaryCard() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_260px]">
-        {/* Narrative */}
-        <div className="text-muted-foreground min-w-0 text-sm">
+        {/* Narrative — body in the darker foreground ink so it reads clearly
+            (headings/bold already use foreground; only meta stays muted). */}
+        <div className="text-foreground min-w-0 text-sm">
           {busy && !data ? (
             <div className="space-y-2">
               <div className="bg-muted h-4 w-11/12 animate-pulse rounded" />
