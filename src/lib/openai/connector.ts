@@ -50,16 +50,28 @@ export interface NormalizeContext {
   currency: string;
 }
 
-// ---- Field extraction (handles bare vs prefixed keys) ----------------------
+// ---- Field extraction (resolve dotted paths across response shapes) ---------
 
-/** Read a field that may be flat ("spend") or namespaced ("campaign.spend"). */
-export function pick(row: OpenAiInsightRow, name: string): unknown {
-  if (row[name] !== undefined) return row[name];
-  for (const prefix of ["campaign", "metadata", "metrics"]) {
-    const v = row[`${prefix}.${name}`];
-    if (v !== undefined) return v;
+/**
+ * Resolve a dotted field path (e.g. "campaign.spend") against a row, tolerating
+ * the shapes the API might return it in: a flat dotted key
+ * (row["campaign.spend"]), a nested object (row.campaign.spend), or a flat bare
+ * key of the last segment (row.spend).
+ */
+export function getField(row: OpenAiInsightRow, path: string): unknown {
+  if (row[path] !== undefined) return row[path]; // flat dotted key
+  const parts = path.split(".");
+  let cur: unknown = row; // nested object
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in (cur as Record<string, unknown>)) {
+      cur = (cur as Record<string, unknown>)[p];
+    } else {
+      cur = undefined;
+      break;
+    }
   }
-  return undefined;
+  if (cur !== undefined) return cur;
+  return row[parts[parts.length - 1]]; // flat bare last segment
 }
 
 const toNum = (v: unknown): number => {
@@ -68,22 +80,20 @@ const toNum = (v: unknown): number => {
 };
 
 /**
- * The reporting day for a row, as YYYY-MM-DD. Prefer `readable_time` when it's
- * already an ISO date (the API's own daily bucket); otherwise derive it from
- * `start_time` (unix seconds/ms or an ISO string), converted to the reporting TZ.
+ * The reporting day for a row, as YYYY-MM-DD, from `metadata.readable_time` —
+ * the API's own daily bucket. Used directly when it's already an ISO date;
+ * otherwise whatever date it names is parsed and formatted in the reporting TZ.
  */
 export function rowDate(row: OpenAiInsightRow, tz: string): string {
-  const readable = pick(row, "readable_time");
-  if (typeof readable === "string" && /^\d{4}-\d{2}-\d{2}$/.test(readable)) return readable;
-
-  const start = pick(row, "start_time") ?? readable;
+  const readable = getField(row, "metadata.readable_time");
+  if (typeof readable === "string" && /^\d{4}-\d{2}-\d{2}/.test(readable)) {
+    return readable.slice(0, 10);
+  }
   let d: Date | null = null;
-  if (typeof start === "number") {
-    d = new Date(start < 1e12 ? start * 1000 : start);
-  } else if (typeof start === "string") {
-    d = /^\d+$/.test(start)
-      ? new Date(Number(start) < 1e12 ? Number(start) * 1000 : Number(start))
-      : new Date(start);
+  if (typeof readable === "number") {
+    d = new Date(readable < 1e12 ? readable * 1000 : readable);
+  } else if (typeof readable === "string" && readable) {
+    d = new Date(readable);
   }
   if (!d || Number.isNaN(d.getTime())) return "";
   return toReportingDateString(d, tz);
@@ -102,14 +112,17 @@ export function normalizeOpenAiRows(
       platform: "openai" as const,
       propertyId: ctx.propertyId,
       adAccountId: ctx.adAccountId,
-      campaignId: String(pick(r, "campaign_id") ?? pick(r, "id") ?? ""),
-      campaignName: String(pick(r, "campaign_name") ?? pick(r, "name") ?? ""),
-      impressions: toNum(pick(r, "impressions")),
+      campaignId: String(getField(r, "campaign.id") ?? ""),
+      campaignName: String(getField(r, "campaign.name") ?? ""),
+      impressions: toNum(getField(r, "campaign.impressions")),
       reach: 0, // OpenAI does not report reach
-      clicks: toNum(pick(r, "clicks")),
-      spend: toNum(pick(r, "spend")), // plain decimal in the account currency
-      conversions: toNum(pick(r, "conversions")),
-      conversionValue: toNum(pick(r, "conversion_value") ?? pick(r, "conversions_value")),
+      clicks: toNum(getField(r, "campaign.clicks")),
+      spend: toNum(getField(r, "campaign.spend")), // plain decimal in account currency
+      // Conversions are NOT exposed on campaign insights fields — they live on a
+      // separate POST /v1/conversions/insights endpoint. Left at 0 for now;
+      // blended revenue-based ROAS still includes OpenAI spend regardless.
+      conversions: 0,
+      conversionValue: 0,
       currency: ctx.currency,
     }))
     // Drop rows we couldn't date or identify (keeps the upsert key clean).
@@ -118,15 +131,16 @@ export function normalizeOpenAiRows(
 
 // ---- Request building ------------------------------------------------------
 
+// Exact field names the live API accepts (it returns the full valid set in its
+// 400 error). All metric fields are `campaign.`-prefixed; the per-row day bucket
+// is `metadata.readable_time`. No conversions field exists here (separate endpoint).
 const INSIGHT_FIELDS = [
-  "campaign_id",
-  "campaign_name",
-  "readable_time",
-  "start_time",
-  "impressions",
-  "clicks",
-  "spend",
-  "conversions",
+  "campaign.id",
+  "campaign.name",
+  "campaign.impressions",
+  "campaign.clicks",
+  "campaign.spend",
+  "metadata.readable_time",
 ];
 
 export function buildInsightsUrl(
