@@ -85,7 +85,7 @@ const toNum = (v: unknown): number => {
  * otherwise whatever date it names is parsed and formatted in the reporting TZ.
  */
 export function rowDate(row: OpenAiInsightRow, tz: string): string {
-  const readable = getField(row, "metadata.readable_time");
+  const readable = getField(row, "readable_time");
   if (typeof readable === "string" && /^\d{4}-\d{2}-\d{2}/.test(readable)) {
     return readable.slice(0, 10);
   }
@@ -112,12 +112,17 @@ export function normalizeOpenAiRows(
       platform: "openai" as const,
       propertyId: ctx.propertyId,
       adAccountId: ctx.adAccountId,
-      campaignId: String(getField(r, "campaign.id") ?? ""),
-      campaignName: String(getField(r, "campaign.name") ?? ""),
-      impressions: toNum(getField(r, "campaign.impressions")),
+      // The API REQUIRES `campaign.`-prefixed field names in the request, but
+      // RETURNS flat snake_case keys: campaign_id, campaign_name, impressions,
+      // clicks, spend, readable_time — plus a composite top-level `id` (unique
+      // per row) that must NOT be used as the campaign id (doing so made every
+      // campaign-day its own unnamed campaign). Parse the real response keys.
+      campaignId: String(getField(r, "campaign_id") ?? ""),
+      campaignName: String(getField(r, "campaign_name") ?? ""),
+      impressions: toNum(getField(r, "impressions")),
       reach: 0, // OpenAI does not report reach
-      clicks: toNum(getField(r, "campaign.clicks")),
-      spend: toNum(getField(r, "campaign.spend")), // plain decimal in account currency
+      clicks: toNum(getField(r, "clicks")),
+      spend: toNum(getField(r, "spend")), // plain decimal in account currency
       // Conversions are NOT exposed on campaign insights fields — they live on a
       // separate POST /v1/conversions/insights endpoint. Left at 0 for now;
       // blended revenue-based ROAS still includes OpenAI spend regardless.
