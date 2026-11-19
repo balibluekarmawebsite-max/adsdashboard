@@ -141,13 +141,13 @@ export function buildInsightsUrl(
     time_granularity: "daily",
     limit: String(limit),
   });
-  // `fields` is an array-of-strings query param: express it as REPEATED keys
-  // (fields=a&fields=b&…) — the standard array-in-querystring encoding. The live
-  // API rejects BOTH a comma-joined string AND a JSON-array string with
-  // "Invalid type for 'fields': expected an array of strings, but got a string
-  // instead", because it does not JSON-parse this param; only repeated keys
-  // deserialize to an array. (Do not use .join(",") or JSON.stringify here.)
-  for (const f of INSIGHT_FIELDS) params.append("fields", f);
+  // `fields` uses the BRACKET array syntax: repeated `fields[]=<value>` keys.
+  // This is dictated by the live API, which rejected every other form it was
+  // tried with: a comma-joined string and a JSON-array string both error
+  // "expected an array of strings, but got a string", and plain repeated
+  // `fields=` keys error "Duplicate parameter: 'fields' … use the array syntax
+  // instead e.g. 'fields[]=<value>'". So: `fields[]`. (Not join/JSON/plain-repeat.)
+  for (const f of INSIGHT_FIELDS) params.append("fields[]", f);
 
   if (cfg.dateParam === "time_ranges") {
     // API-reference form: unix-second bounds.
