@@ -99,8 +99,8 @@ export async function parseMetricsParams(sp: URLSearchParams): Promise<MetricsFi
   let platform: PlatformName | undefined;
   const platformParam = sp.get("platform");
   if (platformParam && platformParam !== "all") {
-    if (platformParam !== "google" && platformParam !== "meta") {
-      throw new ApiError(400, `Invalid "platform" (expected google, meta, or all)`);
+    if (platformParam !== "google" && platformParam !== "meta" && platformParam !== "openai") {
+      throw new ApiError(400, `Invalid "platform" (expected google, meta, openai, or all)`);
     }
     platform = platformParam;
   }

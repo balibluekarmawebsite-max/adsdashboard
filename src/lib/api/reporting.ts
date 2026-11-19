@@ -23,8 +23,8 @@ const utc = (s: string) => new Date(`${s}T00:00:00.000Z`);
 
 function parsePlatform(v: string | null): PlatformName | undefined {
   if (!v || v === "all") return undefined;
-  if (v === "google" || v === "meta") return v;
-  throw new ApiError(400, 'Invalid "platform" (expected "google", "meta", or "all").');
+  if (v === "google" || v === "meta" || v === "openai") return v;
+  throw new ApiError(400, 'Invalid "platform" (expected "google", "meta", "openai", or "all").');
 }
 
 export const API_PERIODS = [

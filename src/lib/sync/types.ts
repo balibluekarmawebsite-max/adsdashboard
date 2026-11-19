@@ -1,5 +1,5 @@
-// Shared shape both connectors (Google, Meta) normalize into before upsert.
-export type PlatformName = "google" | "meta";
+// Shared shape every connector (Google, Meta, OpenAI) normalizes into before upsert.
+export type PlatformName = "google" | "meta" | "openai";
 
 export interface NormalizedMetricRow {
   date: string; // YYYY-MM-DD (in the account's reporting timezone)

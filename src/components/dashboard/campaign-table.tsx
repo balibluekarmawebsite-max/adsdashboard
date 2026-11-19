@@ -100,12 +100,7 @@ export function CampaignTable() {
                       <span className="flex items-center gap-2">
                         <span
                           className="h-2 w-2 shrink-0 rounded-full"
-                          style={{
-                            background:
-                              c.platform === "google"
-                                ? "var(--platform-google)"
-                                : "var(--platform-meta)",
-                          }}
+                          style={{ background: `var(--platform-${c.platform})` }}
                           aria-hidden
                         />
                         <span className="truncate">{c.campaignName}</span>

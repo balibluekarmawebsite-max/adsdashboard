@@ -23,10 +23,11 @@ enum Role {
 }
 
 // Lowercase values match the domain strings used across the API/connectors
-// (platform="google" / "meta").
+// (platform="google" / "meta" / "openai").
 enum Platform {
   google
   meta
+  openai
 }
 
 /// A property is either a hotel (top-level) or an outlet under a hotel.

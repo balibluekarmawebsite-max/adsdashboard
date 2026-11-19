@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { asRole, canManageCampaigns } from "@/lib/rbac";
 import { syncAllGoogle } from "@/lib/google/sync";
 import { syncAllMeta } from "@/lib/meta/sync";
+import { syncAllOpenai } from "@/lib/openai/sync";
 import type { AccountSyncResult } from "@/lib/sync/types";
 import type { SyncWindow } from "@/lib/sync/dates";
 
@@ -10,10 +11,10 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-type PlatformArg = "all" | "google" | "meta";
+type PlatformArg = "all" | "google" | "meta" | "openai";
 
 interface PlatformOutcome {
-  platform: "google" | "meta";
+  platform: "google" | "meta" | "openai";
   ok: boolean;
   accounts: number;
   rows: number;
@@ -36,7 +37,7 @@ store.__adsSyncState ??= { running: false, startedAt: null, finishedAt: null, re
 const state = store.__adsSyncState;
 
 async function runOne(
-  name: "google" | "meta",
+  name: "google" | "meta" | "openai",
   fn: (opt?: SyncWindow) => Promise<{ accounts: number; results: AccountSyncResult[] }>,
   window: SyncWindow,
   outcomes: PlatformOutcome[],
@@ -67,6 +68,7 @@ async function runSync(platform: PlatformArg, window: SyncWindow) {
   const outcomes: PlatformOutcome[] = [];
   if (platform === "all" || platform === "google") await runOne("google", syncAllGoogle, window, outcomes);
   if (platform === "all" || platform === "meta") await runOne("meta", syncAllMeta, window, outcomes);
+  if (platform === "all" || platform === "openai") await runOne("openai", syncAllOpenai, window, outcomes);
   state.results = outcomes;
 }
 

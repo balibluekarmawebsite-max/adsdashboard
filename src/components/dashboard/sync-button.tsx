@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RefreshCw, ChevronDown, Loader2, Check, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type PlatformArg = "all" | "meta" | "google";
+type PlatformArg = "all" | "meta" | "google" | "openai";
 
 interface SyncOutcome {
   platform: string;
@@ -20,9 +20,10 @@ interface SyncStatus {
 }
 
 const OPTIONS: { key: PlatformArg; label: string }[] = [
-  { key: "all", label: "Meta & Google" },
-  { key: "meta", label: "Meta only" },
+  { key: "all", label: "All platforms" },
   { key: "google", label: "Google only" },
+  { key: "meta", label: "Meta only" },
+  { key: "openai", label: "OpenAI only" },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

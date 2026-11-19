@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
-export type PlatformFilter = "all" | "google" | "meta";
+export type PlatformFilter = "all" | "google" | "meta" | "openai";
 export type PresetKey = "7d" | "30d" | "mtd" | "lastMonth" | "custom";
 
 export interface FiltersState {

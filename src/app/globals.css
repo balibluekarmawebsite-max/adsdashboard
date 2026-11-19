@@ -24,6 +24,7 @@
      so they adapt per light/dark step while keeping the same hue everywhere. */
   --platform-google: var(--chart-1);
   --platform-meta: var(--chart-2);
+  --platform-openai: var(--chart-3); /* teal — OpenAI (ChatGPT Ads) */
 }
 
 /* ---------------------------- Light theme ------------------------------- */

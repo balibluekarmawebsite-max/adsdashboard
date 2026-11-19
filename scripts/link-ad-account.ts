@@ -47,7 +47,8 @@ async function main() {
   const usage =
     'Usage:\n  npm run link:account -- --platform <google|meta> --property <CODE> --account <id> --name "<label>" [--currency IDR]\n  npm run link:account -- --list';
 
-  if (platform !== "google" && platform !== "meta") throw new Error(`--platform must be "google" or "meta".\n${usage}`);
+  if (platform !== "google" && platform !== "meta" && platform !== "openai")
+    throw new Error(`--platform must be "google", "meta", or "openai".\n${usage}`);
   if (!propertyCode || !accountRaw || !name) throw new Error(usage);
   if (currency.length !== 3) throw new Error("--currency must be a 3-letter ISO code, e.g. IDR.");
 

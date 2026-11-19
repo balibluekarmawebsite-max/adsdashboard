@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { syncAllGoogle } from "@/lib/google/sync";
 import { syncAllMeta } from "@/lib/meta/sync";
+import { syncAllOpenai } from "@/lib/openai/sync";
 import { prisma } from "@/lib/db";
 import { runSchedule } from "@/lib/reports/scheduled";
 import { toReportingDateString } from "@/lib/sync/dates";
@@ -112,6 +113,12 @@ export function startScheduler(): void {
         console.log(`[cron] meta: ${JSON.stringify(m.results)}`);
       } catch (e) {
         console.error("[cron] meta sync failed", e);
+      }
+      try {
+        const o = await syncAllOpenai({ days });
+        console.log(`[cron] openai: ${JSON.stringify(o.results)}`);
+      } catch (e) {
+        console.error("[cron] openai sync failed", e);
       }
       console.log("[cron] daily sync finished");
     },

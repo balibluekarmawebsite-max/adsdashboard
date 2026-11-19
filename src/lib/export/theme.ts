@@ -20,6 +20,7 @@ export const BRAND = {
   negative: "#d64545", // --destructive (unfavorable)
   google: "#2a78d6", //--chart-1        (Google)
   meta: "#eb6834", //  --chart-2        (Meta)
+  openai: "#1baf7a", //--chart-3        (OpenAI / ChatGPT Ads)
   white: "#ffffff",
 } as const;
 
@@ -45,6 +46,7 @@ export function platformHex(platform: string | null | undefined): string {
   const p = (platform ?? "").toLowerCase();
   if (p === "google") return BRAND.google;
   if (p === "meta") return BRAND.meta;
+  if (p === "openai") return BRAND.openai;
   return BRAND.navy;
 }
 

@@ -7,6 +7,7 @@ const OPTIONS: { key: PlatformFilter; label: string; dot?: string }[] = [
   { key: "all", label: "All" },
   { key: "google", label: "Google", dot: "var(--platform-google)" },
   { key: "meta", label: "Meta", dot: "var(--platform-meta)" },
+  { key: "openai", label: "OpenAI", dot: "var(--platform-openai)" },
 ];
 
 export function PlatformToggle() {

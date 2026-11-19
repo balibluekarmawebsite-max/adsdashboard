@@ -7,7 +7,9 @@ import { formatNumber, formatMoney } from "@/lib/format";
 const PLATFORM_META: Record<string, { label: string; color: string }> = {
   google: { label: "Google", color: "var(--platform-google)" },
   meta: { label: "Meta", color: "var(--platform-meta)" },
+  openai: { label: "OpenAI", color: "var(--platform-openai)" },
 };
+const PLATFORM_ORDER = ["google", "meta", "openai"];
 
 export function PlatformSplit() {
   const { data, isLoading, error } = useByPlatform();
@@ -15,18 +17,18 @@ export function PlatformSplit() {
   const currency = summary?.currency ?? null;
 
   const found = data?.platforms ?? [];
-  const rows = ["google", "meta"]
-    .map((p) => found.find((x) => x.platform === p))
-    .filter((x): x is NonNullable<typeof x> => Boolean(x));
+  const rows = PLATFORM_ORDER.map((p) => found.find((x) => x.platform === p)).filter(
+    (x): x is NonNullable<typeof x> => Boolean(x),
+  );
   const maxSpend = Math.max(1, ...rows.map((r) => r.spend));
 
   return (
-    <ChartCard title="Google vs Meta">
+    <ChartCard title="Spend by platform">
       {error ? (
         <p className="text-destructive text-sm">Couldn’t load this breakdown.</p>
       ) : isLoading && rows.length === 0 ? (
         <div className="space-y-4">
-          {[0, 1].map((i) => (
+          {[0, 1, 2].map((i) => (
             <div key={i} className="bg-muted h-14 animate-pulse rounded-md" />
           ))}
         </div>

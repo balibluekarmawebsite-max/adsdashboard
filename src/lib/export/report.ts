@@ -74,12 +74,14 @@ export interface ReportModel {
 function platformShortLabel(platform: string): string {
   if (platform === "google") return "Google";
   if (platform === "meta") return "Meta";
+  if (platform === "openai") return "OpenAI";
   return platform.replace(/^\w/, (m) => m.toUpperCase());
 }
 
 function platformLabelOf(platform: MetricsFilter["platform"]): string {
   if (platform === "google") return "Google Ads";
   if (platform === "meta") return "Meta Ads";
+  if (platform === "openai") return "OpenAI Ads";
   return "All platforms";
 }
 

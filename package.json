@@ -21,6 +21,7 @@
     "sync:meta": "tsx scripts/sync-meta.ts",
     "sync:all": "tsx scripts/sync-all.ts",
     "connect:meta": "tsx scripts/connect-meta.ts",
+    "connect:openai": "tsx scripts/connect-openai.ts",
     "promote:owner": "tsx scripts/promote-owner.ts",
     "link:account": "tsx scripts/link-ad-account.ts",
     "route:campaign": "tsx scripts/route-campaign.ts",
