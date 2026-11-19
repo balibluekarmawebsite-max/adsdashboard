@@ -141,10 +141,13 @@ export function buildInsightsUrl(
     time_granularity: "daily",
     limit: String(limit),
   });
-  // `fields` must be a JSON-encoded ARRAY of strings. The live API rejects a
-  // comma-joined string with: "Invalid type for 'fields': expected an array of
-  // strings, but got a string instead." Keep JSON.stringify — do not .join(",").
-  params.set("fields", JSON.stringify(INSIGHT_FIELDS));
+  // `fields` is an array-of-strings query param: express it as REPEATED keys
+  // (fields=a&fields=b&…) — the standard array-in-querystring encoding. The live
+  // API rejects BOTH a comma-joined string AND a JSON-array string with
+  // "Invalid type for 'fields': expected an array of strings, but got a string
+  // instead", because it does not JSON-parse this param; only repeated keys
+  // deserialize to an array. (Do not use .join(",") or JSON.stringify here.)
+  for (const f of INSIGHT_FIELDS) params.append("fields", f);
 
   if (cfg.dateParam === "time_ranges") {
     // API-reference form: unix-second bounds.
