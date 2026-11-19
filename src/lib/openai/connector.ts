@@ -139,9 +139,12 @@ export function buildInsightsUrl(
   const params = new URLSearchParams({
     aggregation_level: "campaign",
     time_granularity: "daily",
-    fields: INSIGHT_FIELDS.join(","),
     limit: String(limit),
   });
+  // `fields` must be a JSON-encoded ARRAY of strings. The live API rejects a
+  // comma-joined string with: "Invalid type for 'fields': expected an array of
+  // strings, but got a string instead." Keep JSON.stringify — do not .join(",").
+  params.set("fields", JSON.stringify(INSIGHT_FIELDS));
 
   if (cfg.dateParam === "time_ranges") {
     // API-reference form: unix-second bounds.
